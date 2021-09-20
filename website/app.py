@@ -1,106 +1,137 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
-
 import streamlit as st 
 from PIL import Image
 
 import matplotlib.pyplot as plt 
 import matplotlib
-matplotlib.use("Agg")
 import seaborn as sns
 import pandas as pd 
 import numpy as np
 import datetime as dt
 
+matplotlib.use("Agg")
 
-# In[ ]:
+st.sidebar.title('Menu')
+pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
+selected_page = st.sidebar.radio('Paginas', pages)
 
+csv_file = pd.read_csv('web_data/est_cidade.csv', sep=';', encoding='latin-1')
+states = list(csv_file['UF'].drop_duplicates().sort_values())
 
-st.markdown("# COVID-19")
-st.markdown("Explore the dataset to know more about palmerpenguins")
-# img=Image.open('images/palmerpenguins.png')
-# st.image(img,width=100)
-st.markdown("**Penguins** are some of the most recognizable and beloved birds in the world and even have their own holiday: **World Penguin Day is celebrated every year on April 25**. Penguins are also amazing birds because of their physical adaptations to survive in unusual climates and to live mostly at sea. Penguins propel themselves through water by flapping their flippers.  Bills tend to be long and thin in species that are primarily fish eaters, and shorter and stouter in those that mainly eat krill.”)st.markdown(“The data presented are of 3 different species of penguins - **Adelie, Chinstrap, and Gentoo,** collected from 3 islands in the **Palmer Archipelago, Antarctica.**")
+df_casos = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
+df_casos['data'] = pd.to_datetime(df_casos['data'])
 
+def find_cities(selected_states):
+    return list(csv_file[csv_file['UF']==selected_states]['Município'].sort_values())
 
-# In[ ]:
+def filter_state_city():
+    choose_state = st.sidebar.checkbox('Filtrar por estado')
+    choose_city = None
+    selected_state = None
+    selected_city = None
 
-
-df_covid_saude_obitos = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
-
-
-# In[ ]:
-
-
-def filter_slider_dates(message, df):
-    date_array = np.array(df['data'].unique())
-    date_len = df['data'].nunique()
+    if choose_state:
+        selected_state = st.sidebar.selectbox('Estado', states)
+        choose_city = st.sidebar.checkbox('Filtrar por cidade')
+    if choose_city:
+        selected_city = st.sidebar.selectbox('Cidade', find_cities(selected_state))
     
-    slider_1, slider_2 = st.slider('%s' % (message), 0, date_len-1, [0,date_len-1], 1)
+    return selected_state, selected_city
 
-    # Ordenar array para buscarmos valor pelos index slider_1 e slider_2
-    date_array.sort()
+def filter_date(df):
+    choose_date = st.sidebar.checkbox('Filtrar por data')
+    min_date = df['data'].min()
+    max_date = df['data'].max()
+    date_range = (dt.date(min_date.year, min_date.month, min_date.day), dt.date(max_date.year, max_date.month, max_date.day))
+    selected_date = None    
+
+    if choose_date:
+        selected_date = st.sidebar.slider('Data', value=date_range, format="DD/MM/YYYY")
+
+    return selected_date
+
+def filters(df_casos):
+    selected_filters = dict()
+    selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
+    selected_state, selected_city = filter_state_city()
     
-    start_date = dt.datetime.strptime(str(date_array[slider_1]),'%Y-%m-%d')
-    start_date = start_date.strftime('%d %b %Y')
-
-    end_date = dt.datetime.strptime(str(date_array[slider_2]),'%Y-%m-%d')
-    end_date = end_date.strftime('%d %b %Y')
-
-    st.info('Início: **%s** Fim: **%s**' % (start_date,end_date))
-
-    filtered_df = df.loc[(df['data']>=date_array[slider_1]) & (df['data']<=date_array[slider_2])]
-
-    return filtered_df
-
-
-# In[ ]:
-
-
-def filter_slider_city(message, df):
-    cities_list = list(df['municipio'].unique())
+    selected_filters['state'] =  selected_state
+    selected_filters['city']  = selected_city
     
-    city = st.selectbox('%s' % (message), options=tuple(cities_list), index=cities_list.index("São Paulo"))
+    if selected_filters['city']:
+        df_filtered = df_casos.loc[(df_casos['municipio']==selected_filters['city'])]
+    else:
+        df_filtered = df_casos.loc[(df_casos['municipio']=='São Paulo')]
+        
+    selected_date_range = filter_date(df_filtered)
+
+    selected_filters['database'] = selected_data
+    selected_filters['date'] = selected_date_range
     
-    filtered_df = df.loc[df['municipio']==city]
+    if selected_filters['date']:
+        df_filtered = df_filtered.loc[(df_filtered['data'].dt.date>=selected_filters['date'][0]) & (df_filtered['data'].dt.date<=selected_filters['date'][1])]
+    
+    return selected_filters, df_filtered
 
-    return filtered_df
+def home():
+    st.title('Início')
 
+def predictive_models():
+    st.title('Modelos preditivos')
+
+    selected_filters, df_filtered = filters(df_casos)
+    if selected_filters:
+        st.info(f"{selected_filters}") 
+
+
+def descriptive_models():
+    st.title('Modelos descritivos')
+
+    selected_filters, df_filtered = filters(df_casos)
+    if selected_filters:
+        st.info(f"{selected_filters}")
+    
+    st.title('Número de óbitos por dia')
+    st.line_chart(df_filtered[['data', 'obitosNovos']].set_index('data'))
+        
+def about():
+    st.title('Sobre')
+
+    st.markdown("""
+   
+    ### O Projeto
+    Plataforma Web para disponibilizar publicamente a previsão de casos 
+    de óbito e vacinação relacionados à Covid-19 em nível municipal.
+
+    ### A Gerência
+    | Membro | Função |
+    | ------ | ------ |
+    | Francisco Louzada Neto | CEO |
+    | Loriz Sallum | Diretora |
+    | Oilson Gonzatto | Diretor |
+
+    ### Os membros da equipe
+    | Aluno | Função |
+    | ------ | ------ |
+    | Bernardo | Estatístico |
+    | Bruno Braziel | Programador |
+    | Francisco Pigato | Coordenador |
+    | Lucas Nakadaira | Programador |
+    | Mariana Spanol | Estatística |
+    
+
+    #### PROBABILIDADE E ESTATÍSTICA 
+    #### MECAI - 2021
+    """)
 
 # In[ ]:
-
-
-column_1, column_2 = st.beta_columns(2)
-
-
-# In[ ]:
-
-
-with column_1:
-    st.title('Filtro de datas')
-    df_filtered = filter_slider_dates('Move sliders to filter dataframe', df_covid_saude_obitos)
-
-
-# In[ ]:
-
-
-with column_2:
-    st.title('Filtro de Municípios')
-    df_filtered = filter_slider_city('Move sliders to filter dataframe', df_filtered)
-
-
-# In[ ]:
-
-
-st.title('Número de óbitos por dia')
-st.line_chart(df_filtered[['data', 'obitosNovos']].set_index('data'))
-
-
-# In[ ]:
-
-
-
-
+if selected_page == 'Início':
+    home()
+elif selected_page == 'Modelos preditivos':
+    predictive_models()
+elif selected_page == 'Modelos descritivos':
+    descriptive_models()
+elif selected_page == 'Sobre':
+    about()
