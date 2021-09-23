@@ -1,3 +1,5 @@
 selenium
 pandas
 numpy
+matplotlib
+seaborn

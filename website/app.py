@@ -17,10 +17,10 @@ st.sidebar.title('Menu')
 pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
 selected_page = st.sidebar.radio('Paginas', pages)
 
-csv_file = pd.read_csv('web_data/est_cidade.csv', sep=';', encoding='latin-1')
+csv_file = pd.read_csv('../covid19_previsoes_municipios/website/web_data/est_cidade.csv', sep=';', encoding='latin-1')
 states = list(csv_file['UF'].drop_duplicates().sort_values())
 
-df_casos = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
+df_casos = pd.read_parquet('../covid19_previsoes_municipios/data/app/covid_saude_obito_municipio.parquet')
 df_casos['data'] = pd.to_datetime(df_casos['data'])
 
 def find_cities(selected_states):
