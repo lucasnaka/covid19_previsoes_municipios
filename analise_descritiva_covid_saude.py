@@ -21,12 +21,13 @@ def plotar_serie_temporal(titulo, rotulo_y, variavel, media_movel_variavel, df):
     plt.show()
 
 
-def plotar_grafico_barras(titulo, rotulo_x, rotulo_y, variavel_x, variavel_y, variavel_linha, df):
+def plotar_grafico_barras(titulo, rotulo_x, rotulo_y, variavel_x, variavel_y, df, media_movel_variavel=None,
+                          media_movel=True):
     sns.set_theme(style="whitegrid", rc=None)
     fig, ax1 = plt.subplots(figsize=(15, 7))
     sns.barplot(x=variavel_x, y=variavel_y, data=df, palette="Blues_d", ax=ax1).set_title(titulo)
-    ax2 = ax1.twinx()
-    sns.lineplot(x=variavel_x, y=variavel_linha, data=df, sort=False, color='black',ax=ax2)
+    if media_movel:
+        sns.lineplot(ax=ax1, x=variavel_x, y=media_movel_variavel, data=df, label='Média móvel')
     plt.xlabel(rotulo_x)
     plt.ylabel(rotulo_y)
     plt.show()
@@ -42,11 +43,15 @@ df = df.drop(columns=['Recuperadosnovos', 'emAcompanhamentoNovos'])
 # Dropa os casos em que o municio é vazio, cria a coluna com a taxa de letalidade e preenche os campos nulos com zero
 df = df[~df['municipio'].isna()]
 df['data'] = pd.to_datetime(df['data'], format='%Y-%m-%d')
+df['mes'] = pd.DatetimeIndex(df['data']).month
+df['mes'] = df['mes'].astype('str')
 df['ano'] = pd.DatetimeIndex(df['data']).year
 df['ano'] = df['ano'].astype('str')
 df['semanaEpi'] = df['semanaEpi'].astype('str')
 df['semanaEpi'] = df.apply(lambda x: adiciona_zero_a_esquerda(x['semanaEpi']), axis=1)
+df['mes'] = df.apply(lambda x: adiciona_zero_a_esquerda(x['mes']), axis=1)
 df['semana_ano'] = df['ano'] + df['semanaEpi']
+df['mes_ano'] = df['ano'] + df['mes']
 df['taxa_de_letalidade'] = df['obitosAcumulado'] / df['casosAcumulado']
 df['taxa_de_letalidade'] = df['taxa_de_letalidade'].fillna(0)
 
@@ -70,20 +75,65 @@ print(f'Total de óbitos: {df_uf.obitosNovos.sum()}')
 print(f"Total de casos nas últimas 24hrs: {df_uf[df_uf['data'] == df_uf['data'].max()].casosNovos.sum()}")
 print(f"Total de óbitos nas últimas 24hrs: {df_uf[df_uf['data'] == df_uf['data'].max()].obitosNovos.sum()}")
 print(f"Taxa de letalidade em percentual: {round(df_uf.obitosNovos.sum() / df_uf.casosNovos.sum() * 100, 2)}%")
-df_plot = df_uf.groupby(['data'], as_index=False)[
+df_uf_diario = df_uf.groupby(['data'], as_index=False)[
     ['casosNovos', 'obitosNovos', 'casosAcumulado', 'obitosAcumulado',
      'media_movel_casos', 'media_movel_obitos']].sum()
-df_plot['taxa_de_letalidade'] = df_plot['obitosAcumulado'] / df_plot['casosAcumulado']
-df_plot['taxa_de_letalidade'] = df_plot['taxa_de_letalidade'].fillna(0)
-df_plot['media_movel_letalidade'] = df_plot['taxa_de_letalidade'].transform(
+df_uf_diario['taxa_de_letalidade'] = df_uf_diario['obitosAcumulado'] / df_uf_diario['casosAcumulado']
+df_uf_diario['taxa_de_letalidade'] = df_uf_diario['taxa_de_letalidade'].fillna(0)
+df_uf_diario['media_movel_letalidade'] = df_uf_diario['taxa_de_letalidade'].transform(
     lambda x: x.rolling(7, 1).mean())
 
 plotar_serie_temporal(f'Número de casos de covid confirmados em {uf}', 'Número de casos', 'casosNovos',
-                      'media_movel_casos', df_plot)
+                      'media_movel_casos', df_uf_diario)
 plotar_serie_temporal(f'Número de óbitos de covid em {uf}', 'Número de óbitos', 'obitosNovos', 'media_movel_obitos',
-                      df_plot)
+                      df_uf_diario)
 plotar_serie_temporal(f'Taxa de letalidade por covid em {uf}', 'Taxa de letalidade', 'taxa_de_letalidade',
-                      'media_movel_letalidade', df_plot)
+                      'media_movel_letalidade', df_uf_diario)
+
+# Análise semanal por UF de casos, óbitos e letalidade
+df_uf_semanal = df_uf.groupby(['semana_ano'], as_index=False)[
+    ['casosNovos', 'obitosNovos', 'media_movel_casos', 'media_movel_obitos']].sum()
+
+df_uf_semanal['casosAcumulado'] = df_uf_semanal['casosNovos'].cumsum(axis=0)
+df_uf_semanal['obitosAcumulado'] = df_uf_semanal['obitosNovos'].cumsum(axis=0)
+
+df_uf_semanal['taxa_de_letalidade'] = df_uf_semanal['obitosAcumulado'] / df_uf_semanal['casosAcumulado']
+df_uf_semanal['taxa_de_letalidade'] = df_uf_semanal['taxa_de_letalidade'].fillna(0)
+df_uf_semanal['media_movel_letalidade'] = df_uf_semanal['taxa_de_letalidade'].transform(
+    lambda x: x.rolling(2, 1).mean())
+
+df_uf_semanal['index'] = range(1, len(df_uf_semanal) + 1)
+
+plotar_grafico_barras(f'Número de casos de covid confirmados em {uf} por semana', 'Semana da pandemia',
+                      'Número de casos', 'index', 'casosNovos', df_uf_semanal, 'media_movel_casos')
+
+plotar_grafico_barras(f'Número de óbitos por covid em {uf} por semana', 'Semana da pandemia',
+                      'Número de óbitos', 'index', 'obitosNovos', df_uf_semanal, 'media_movel_obitos')
+
+plotar_grafico_barras(f'Taxa de letalidade por covid em {uf} por semana', 'Semana da pandemia',
+                      'Taxa de letalidade', 'index', 'taxa_de_letalidade', df_uf_semanal, 'media_movel_letalidade')
+
+# Análise mensal por UF de casos, óbitos e letalidade
+
+df_uf_mensal = df_uf.groupby(['mes_ano'], as_index=False)[
+    ['casosNovos', 'obitosNovos', 'media_movel_casos', 'media_movel_obitos']].sum()
+
+df_uf_mensal['casosAcumulado'] = df_uf_mensal['casosNovos'].cumsum(axis=0)
+df_uf_mensal['obitosAcumulado'] = df_uf_mensal['obitosNovos'].cumsum(axis=0)
+
+df_uf_mensal['taxa_de_letalidade'] = df_uf_mensal['obitosAcumulado'] / df_uf_mensal['casosAcumulado']
+df_uf_mensal['taxa_de_letalidade'] = df_uf_mensal['taxa_de_letalidade'].fillna(0)
+
+df_uf_mensal['index'] = range(1, len(df_uf_mensal) + 1)
+
+plotar_grafico_barras(f'Número de casos de covid confirmados em {uf} por mês', 'Mês da pandemia',
+                      'Número de casos', 'index', 'casosNovos', df_uf_mensal, media_movel=False)
+
+plotar_grafico_barras(f'Número de óbitos por covid em {uf} por mês', 'Mês da pandemia',
+                      'Número de óbitos', 'index', 'obitosNovos', df_uf_mensal, media_movel=False)
+
+plotar_grafico_barras(f'Taxa de letalidade por covid em {uf} por mês', 'Mês da pandemia',
+                      'Taxa de letalidade', 'index', 'taxa_de_letalidade', df_uf_mensal, media_movel=False)
 
 # Define municipio para plotar os gráficos diários de casos, óbitos e letalidade
 municipio = 'São Carlos'
@@ -93,45 +143,33 @@ print(f'Total de óbitos: {df_mun.obitosNovos.sum()}')
 print(f"Total de óbitos nas últimas 24hrs: {df_mun[df_mun['data'] == df_mun['data'].max()].casosNovos.sum()}")
 print(f"Taxa de letalidade em percentual: {round(df_mun.obitosNovos.sum() / df_mun.casosNovos.sum() * 100, 2)}%")
 plotar_serie_temporal(f'Número de casos de covid confirmados em {municipio} - {uf}', 'Número de casos', 'casosNovos',
-                      'media_movel_casos',
-                      df_mun)
+                      df_mun, 'media_movel_casos')
 plotar_serie_temporal(f'Número de óbitos de covid em {municipio} - {uf}', 'Número de óbitos', 'obitosNovos',
-                      'media_movel_obitos', df_mun)
+                      df_mun, 'media_movel_obitos')
 plotar_serie_temporal(f'Taxa de letalidade por covid em {municipio} - {uf}', 'Taxa de letalidade', 'taxa_de_letalidade',
-                      'media_movel_letalidade', df_mun)
+                      df_mun, 'media_movel_letalidade')
 
+# Análise semanal de município para casos, óbitos e letalidade
 df_mun_semanal = df_mun.groupby(['semana_ano'], as_index=False)[
-    ['casosNovos', 'obitosNovos', 'casosAcumulado', 'obitosAcumulado',
-     'media_movel_casos', 'media_movel_obitos']].sum()
+    ['casosNovos', 'obitosNovos', 'media_movel_casos', 'media_movel_obitos']].sum()
+
+df_mun_semanal['casosAcumulado'] = df_mun_semanal['casosNovos'].cumsum(axis=0)
+df_mun_semanal['obitosAcumulado'] = df_mun_semanal['obitosNovos'].cumsum(axis=0)
+
+df_mun_semanal['taxa_de_letalidade'] = df_mun_semanal['obitosAcumulado'] / df_mun_semanal['casosAcumulado']
+df_mun_semanal['taxa_de_letalidade'] = df_mun_semanal['taxa_de_letalidade'].fillna(0)
+df_mun_semanal['media_movel_letalidade'] = df_mun_semanal['taxa_de_letalidade'].transform(
+    lambda x: x.rolling(2, 1).mean())
 
 df_mun_semanal['index'] = range(1, len(df_mun_semanal) + 1)
 
-plotar_grafico_barras(f'Número de casos e óbitos por covid em {municipio} - {uf} por semana', 'Semana',
-                      'Número de óbitos',
-                      'index', 'casosNovos','obitosNovos', df_mun_semanal)
+plotar_grafico_barras(f'Número de casos de covid confirmados em {municipio} - {uf} por semana', 'Semana da pandemia',
+                      'Número de casos', 'index', 'casosNovos', df_mun_semanal, 'media_movel_casos')
 
-#Create combo chart
-fig, ax1 = plt.subplots(figsize=(10,6))
-color = 'tab:green'
-#bar plot creation
-ax1.set_title('Average Percipitation Percentage by Month', fontsize=16)
-ax1.set_xlabel('Month', fontsize=16)
-ax1.set_ylabel('Avg Temp', fontsize=16)
-ax1 = sns.barplot(x='index', y='casosNovos', data = df_mun_semanal, palette='summer')
-ax1.tick_params(axis='y')
-#specify we want to share the same x-axis
-ax2 = ax1.twinx()
-color = 'tab:red'
-#line plot creation
-ax2.set_ylabel('Avg Percipitation %', fontsize=16)
-ax2 = sns.lineplot(x='index', y='obitosNovos', data = df_mun_semanal, sort=False, color=color)
-ax2.tick_params(axis='y', color=color)
-#show plot
-plt.show()
+plotar_grafico_barras(f'Número de óbitos por covid em {municipio} - {uf} por semana', 'Semana da pandemia',
+                      'Número de óbitos', 'index', 'obitosNovos', df_mun_semanal, 'media_movel_obitos')
 
-sns.set_theme(style="whitegrid", rc=None)
-sns.barplot(x=df_mun_semanal.index.tolist(),
-            y=df_mun_semanal.obitosNovos.tolist())  # .set_title(f'Número de óbitos de covid em {municipio} - {uf} por semana')
-# plt.xlabel('Semana')
-# plt.ylabel('Número de óbitos')
-plt.show()
+plotar_grafico_barras(f'Taxa de letalidade por covid em {municipio} - {uf} por semana', 'Semana da pandemia',
+                      'Taxa de letalidade', 'index', 'taxa_de_letalidade', df_mun_semanal, 'media_movel_letalidade')
+
+# Análise mensal de município para casos, óbitos e letalidade
