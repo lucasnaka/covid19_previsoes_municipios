@@ -85,6 +85,12 @@ target/
 *.gz
 *.zip
 
+# Folders
+data
+/data/
+data/
+/data
+
 # Mac OS-specific storage files
 .DS_Store
 
