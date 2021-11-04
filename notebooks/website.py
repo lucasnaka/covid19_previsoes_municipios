@@ -13,6 +13,9 @@ import seaborn as sns
 import pandas as pd 
 import numpy as np
 import datetime as dt
+import numpy as np
+import pandas as pd
+import plotly.express as px
 
 matplotlib.use("Agg")
 
@@ -25,6 +28,15 @@ states = list(csv_file['UF'].drop_duplicates().sort_values())
 
 df_casos = pd.read_parquet('../covid19_previsoes_municipios/data/app/covid_saude_obito_municipio.parquet')
 df_casos['data'] = pd.to_datetime(df_casos['data'])
+
+covid_cases = pd.read_csv(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\data\raw\covid_saude\HIST_PAINEL_COVIDBR_2020_Parte1_25out2021.csv", sep = ";")
+covid_cases.data = pd.to_datetime(covid_cases.data)
+covid_cases['date'] =covid_cases.data.dt.to_period("M")
+
+df_g = covid_cases.groupby(['regiao', 'semanaEpi']).size().reset_index()
+df_g['percentage'] = covid_cases.groupby(['regiao', 'semanaEpi'])['obitosNovos'].size().groupby(level=1).apply(lambda x: 100 * x / float(x.sum())).values
+df_g.columns = ['regiao', 'semanaEpi','obitosNovos', 'Percentage']
+covid_cases_sum = covid_cases.groupby('data')['obitosNovos'].sum().reset_index()
 
 def find_cities(selected_states):
     return list(csv_file[csv_file['UF']==selected_states]['Município'].sort_values())
@@ -98,6 +110,29 @@ def descriptive_models():
     
     st.title('Número de óbitos por dia')
     st.line_chart(df_filtered[['data', 'obitosNovos']].set_index('data'))
+
+    fig = make_subplots(rows=1, cols=1)
+
+
+    fig.add_trace(go.Line(x = df_g[df_g.regiao != 'Brasil'].groupby(['semanaEpi','regiao'])['obitosNovos'].sum().reset_index().semanaEpi,
+                    y =  df_g[df_g.regiao != 'Brasil'].groupby(['semanaEpi','regiao'])['obitosNovos'].sum().reset_index().obitosNovos), row=1, col=1)  #mudar pra media nmovel
+
+    fig.update_layout( title="Line time series for total cases",
+                        title_font_color="black",
+                            font=dict(
+                                family="arial",
+                                size=18), template="plotly_white")
+    fig.show()
+    
+    fig2 = px.bar(df_g[df_g.regiao != 'Brasil'], x=df_g[df_g.regiao != 'Brasil'].semanaEpi, y=df_g[df_g.regiao != 'Brasil']['Percentage'], color='regiao',
+       text=df_g[df_g.regiao != 'Brasil']['Percentage'].apply(lambda x: '{0:1.2f}%'.format(x)))
+    fig2.update_layout( title="Stacked bar with '%' for Regions",
+                       title_font_color="black",
+                           yaxis_title="% Casos por Regiao",
+                           font=dict(
+                            family="arial",
+                            size=18), template="plotly_white")
+    fig2.show()
         
 def about():
     st.title('Sobre')
