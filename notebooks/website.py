@@ -16,6 +16,10 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 import plotly.express as px
+# importar bibliotecas
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 matplotlib.use("Agg")
 
@@ -122,7 +126,7 @@ def descriptive_models():
                             font=dict(
                                 family="arial",
                                 size=18), template="plotly_white")
-    fig.show()
+    st.plotly_chart(fig)
     
     fig2 = px.bar(df_g[df_g.regiao != 'Brasil'], x=df_g[df_g.regiao != 'Brasil'].semanaEpi, y=df_g[df_g.regiao != 'Brasil']['Percentage'], color='regiao',
        text=df_g[df_g.regiao != 'Brasil']['Percentage'].apply(lambda x: '{0:1.2f}%'.format(x)))
@@ -132,7 +136,7 @@ def descriptive_models():
                            font=dict(
                             family="arial",
                             size=18), template="plotly_white")
-    fig2.show()
+    st.plotly_chart(fig2)
         
 def about():
     st.title('Sobre')
