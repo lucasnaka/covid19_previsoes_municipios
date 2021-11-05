@@ -6,6 +6,8 @@ from PIL import Image
 
 import matplotlib.pyplot as plt 
 import matplotlib
+import plotly.express as px
+import plotly.graph_objects as go
 import seaborn as sns
 import pandas as pd 
 import numpy as np
@@ -22,6 +24,20 @@ states = list(csv_file['UF'].drop_duplicates().sort_values())
 
 df_casos = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
 df_casos['data'] = pd.to_datetime(df_casos['data'])
+
+df_boletim_direitos = pd.read_csv('../data/raw/boletim_covid/boletim_direitos_covid.csv', encoding='latin-1')
+df_boletim_direitos['data'] = pd.to_datetime(df_boletim_direitos['data'], format='%d/%m/%Y')
+
+df_boletim_direitos['noticia'] = df_boletim_direitos['noticia'].str.wrap(30)
+df_boletim_direitos['noticia'] = df_boletim_direitos['noticia'].apply(lambda x: x.replace('\n', '<br>'))
+
+df_casos = df_casos.merge(df_boletim_direitos, how='left', on='data')
+
+def SetNewsSize(x):
+    if not pd.isnull(x):
+        return 7.5
+    else:
+        return 0
 
 def find_cities(selected_states):
     return list(csv_file[csv_file['UF']==selected_states]['Município'].sort_values())
@@ -93,8 +109,23 @@ def descriptive_models():
     if selected_filters:
         st.info(f"{selected_filters}")
     
-    st.title('Número de óbitos por dia')
-    st.line_chart(df_filtered[['data', 'obitosNovos']].set_index('data'))
+#     st.title('Número de óbitos por dia')
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(x=df_filtered["data"], 
+                             y=df_filtered["obitosNovos"], 
+                             text=df_filtered['noticia'],
+                             hoverinfo='text',
+                             mode='lines+markers',
+                             marker = dict(size=list(map(SetNewsSize, df_filtered['noticia'])),
+                                           color=['orange']*df_filtered.shape[0])
+                             )
+                 )
+#                   hover_data=['noticia'], 
+#                   title='Número de óbitos por dia')
+    
+    st.write(fig)
+#     st.line_chart(df_filtered[['data', 'obitosNovos']].set_index('data'))
         
 def about():
     st.title('Sobre')
