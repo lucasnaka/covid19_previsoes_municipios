@@ -31,6 +31,12 @@ def main():
 
     df_casos = pd.read_parquet('data/app/covid_saude_obito_municipio.parquet')
     df_casos_reg = pd.read_parquet('data/app/covid_saude_obito_regiao.parquet')
+    #csv_file = pd.read_csv('web_data/est_cidade.csv', sep=';', encoding='latin-1')
+    #states = list(csv_file['UF'].drop_duplicates().sort_values())
+
+    #df_casos = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
+    #df_casos_reg = pd.read_parquet('../data/app/covid_saude_obito_regiao.parquet')
+
 
     df_casos['data'] = pd.to_datetime(df_casos['data'])
     df_casos_reg['data'] = pd.to_datetime(df_casos_reg['data'])
