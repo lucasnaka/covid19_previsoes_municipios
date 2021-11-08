@@ -127,25 +127,36 @@ def descriptive_models():
                                          color=['orange'] * df_filtered.shape[0])
                              )
                   )
+    fig.update_layout(title="Óbitos diários",
+                      title_font_color="black",
+                      yaxis_title="Número de óbitos",
+                      font=dict(
+                          family="arial",
+                          size=14),
+                      template="plotly_white",
+                      margin=dict(b=0))
+
     #                   hover_data=['noticia'],
     #                   title='Número de óbitos por dia')
 
-    st.write(fig)
+    st.plotly_chart(fig)
 
     fig = px.bar(df_filtered_reg,
                  x=df_filtered_reg['data'],
                  y=df_filtered_reg['percentage_deaths'],
                  color='regiao',
+                 labels={
+                     "regiao": "Região",
+                 },
                  text=df_filtered_reg['percentage_deaths'].apply(lambda x: '{0:1.2f}%'.format(x)))
-    fig.update_layout(title="Stacked bar with '%' for Regions",
-                      title_font_color="black",
-                      yaxis_title="% Casos por Regiao",
+    fig.update_layout(yaxis_title="% Óbitos semanais por região",
                       font=dict(
                           family="arial",
-                          size=18),
-                      template="plotly_white")
+                          size=14),
+                      template="plotly_white",
+                      margin=dict(t=0))
 
-    st.write(fig)
+    st.plotly_chart(fig)
 
 
 #     st.line_chart(df_filtered[['data', 'obitosNovos']].set_index('data'))
