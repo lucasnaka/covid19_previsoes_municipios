@@ -13,26 +13,40 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import datetime as dt
+from urllib.request import urlopen
+import json
 
 
 st.set_page_config(
     layout="wide",
-    initial_sidebar_state="expanded")
+    initial_sidebar_state="expanded",
+    page_title= "Previsão Covid-19 ICMC/USP", page_icon="🖖"
+    )
 
 matplotlib.use("Agg")
+
 st.title("Previsão de Obitos COVID-19 - ICMC/MECAI - USP")
 
 st.sidebar.title('Menu')
 pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
 selected_page = st.sidebar.radio('Paginas', pages)
 
-df_casos = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
-df_casos_reg = pd.read_parquet('../data/app/covid_saude_obito_regiao.parquet')
-csv_file = pd.read_parquet('../data/app/est_cidade.parquet')
-states = list(csv_file['estado'].drop_duplicates().sort_values())
-
+df_casos = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_municipio.parquet')
+df_casos_reg = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_regiao.parquet')
 df_casos['data'] = pd.to_datetime(df_casos['data'])
 df_casos_reg['data'] = pd.to_datetime(df_casos_reg['data'])
+csv_file = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/est_cidade.parquet')
+states = list(csv_file['estado'].drop_duplicates().sort_values())
+vacina = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
+
+with urlopen('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson') as response:
+    Brasil = json.load(response)
+state_id_map = {}
+
+for feature in  Brasil["features"]:
+    feature["id"] = feature["properties"]["name"]
+    state_id_map[feature["properties"]["sigla"]] = feature["id"] # definindo a informação do gráfico
+
 
 def SetNewsSize(x):
     if not pd.isnull(x):
@@ -108,66 +122,117 @@ def predictive_models():
 
 def descriptive_models():
     st.header('Modelos descritivos')
+    
+    with st.beta_container():
+        col1, col2= st.beta_columns([20, 10])
 
-    col1, col2, col3 = st.beta_columns((13.0, 2.0, 1.5))
+        selected_filters, df_filtered, df_filtered_reg = filters(df_casos, df_casos_reg)
+        if selected_filters:
+            st.info(f"{selected_filters}")
+            
 
-    selected_filters, df_filtered, df_filtered_reg = filters(df_casos, df_casos_reg)
-    if selected_filters:
-        st.info(f"{selected_filters}")
 
-    #     st.title('Número de óbitos por dia')
-    fig = go.Figure()
+        #     st.title('Número de óbitos por dia')
+        with col1:
+            html_card_header1="""
+            <div class="card">
+            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 1350px;
+            height: 50px;">
+                <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
+            </div>
+            </div>
+            """
+            st.markdown(html_card_header1, unsafe_allow_html=True)
+            mean_ob = np.mean(df_filtered["obitosNovos"])
+            figin = go.Figure().add_trace(go.Indicator(
+    mode = "number",
+    value = mean_ob,
+    domain = {'row': 1, 'column': 0}))
 
-    fig.add_trace(go.Scatter(x=df_filtered["data"],
-                             y=df_filtered["obitosNovos"],
-                             text=df_filtered['texto'],
-                             hoverinfo='text',
-                             mode='lines+markers',
-                             marker=dict(size=list(map(SetNewsSize, df_filtered['texto'])),
-                                         color=['orange'] * df_filtered.shape[0]),
-                             )
-                  )
+            st.plotly_chart(figin.update_layout(autosize=False,
+                             width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
+                             paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
 
-    fig.update_layout(title="Óbitos diários",
-                      title_font_color="black",
-                      yaxis_title="Número de óbitos",
-                      font=dict(
-                          family="arial",
-                          size=14),
-                      template="plotly_white",
-                      margin=dict(b=0))
+            fig = go.Figure()
 
-    col1.plotly_chart(fig, use_container_width=True)
+            fig.add_trace(go.Scatter(x=df_filtered["data"],
+                                y=df_filtered["obitosNovos"],
+                                text=df_filtered['texto'],
+                                hoverinfo='text',
+                                mode='lines+markers',
+                                marker=dict(size=list(map(SetNewsSize, df_filtered['texto'])),
+                                            color=['orange'] * df_filtered.shape[0]),
+                                )
+                    )
 
-    fig = px.bar(df_filtered_reg,
-                 x=df_filtered_reg['data'],
-                 y=df_filtered_reg['percentage_deaths'],
-                 color='regiao',
-                 labels={
-                     "regiao": "Região",
-                 },)
-                 # text=df_filtered_reg['percentage_deaths'].apply(lambda x: '{0:1.2f}%'.format(x)))
-    fig.update_layout(yaxis_title="% Óbitos semanais por região",
-                      font=dict(
-                          family="arial",
-                          size=14),
-                      template="plotly_white",
-                      margin=dict(t=0))
+            fig.update_layout(title="Óbitos diários",
+                            title_font_color="black",
+                            yaxis_title="Número de óbitos",
+                            font=dict(
+                                family="arial",
+                                size=14),
+                            template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
+                            margin=dict(l=20, r=20, b=20, t=30), width=1050, height=590)
 
-    col1.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            fig = go.Figure()
+            fig = px.bar(df_filtered_reg,
+                    x=df_filtered_reg['data'],
+                    y=df_filtered_reg['percentage_deaths'],
+                    color='regiao',
+                    labels={
+                        "regiao": "Região",
+                    },)
+                    # text=df_filtered_reg['percentage_deaths'].apply(lambda x: '{0:1.2f}%'.format(x)))
+            fig.update_layout(yaxis_title="% Óbitos semanais por região",
+                        font=dict(
+                            family="arial",
+                            size=14),
+                        template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
+                        margin=dict(l=20, r=20, b=20, t=30), width=1050, height=550)
 
-    mean_ob = np.mean(df_filtered["obitosNovos"])
-    new_title = f'<p style="background: #76BCFB;width: 100px; height: 100px; font-family:arial; color:Black; font-size: 18px;">Média Obitos BR: {mean_ob: .2f}</p>'
-    col2.markdown(new_title, unsafe_allow_html=True)
+            st.plotly_chart(fig, use_container_width=True)
 
-    new_title = f'<p style="background: #76BCFB; ;width: 100px; height: 100px;font-family:arial; color:Black; font-size: 18px;">Média Obitos BR: {mean_ob: .2f}</p>'
-    col3.markdown(new_title, unsafe_allow_html=True)
+        with col2:
+            html_card_header2="""
+            <div class="card">
+            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 550px;
+            height: 50px;">
+                <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
+            </div>
+            </div>
+            """
+            st.markdown(html_card_header2, unsafe_allow_html=True)
+            mean_ob = np.mean(df_filtered["obitosNovos"])    
+            figin = go.Figure().add_trace(go.Indicator(
+    mode = "number",
+    value = mean_ob,
+    domain = {'row': 1, 'column': 0}))
 
-    new_title = f'<p style="background: #76BCFB;width: 100px; height: 100px; font-family:arial; color:Black; font-size: 18px;">Média Obitos BR: {mean_ob: .2f}</p>'
-    col2.markdown(new_title, unsafe_allow_html=True)
+            st.plotly_chart(figin.update_layout(autosize=False,
+                             width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
+                             paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
+            fig2 = px.choropleth_mapbox(
+                vacina, # banco de dados da soja
+                locations="Estado", # definindo os limites no mapa
+                geojson=Brasil, # definindo as delimitações geográficas
+                color="ind", # definindo a cor através da base de dados
+                hover_name="Estado", # pontos que você quer mostrar na caixinha de informação
+                hover_data=[ 'Estado',  'ind', 'Latitude',	'Longitude'],
+                mapbox_style="carto-positron", # Definindo novo estilo de mapa, o de satélite
+                zoom=2.5,  # o tamanho do gráfico
+                opacity=0.5, # opacidade da cor do map
+                center={"lat": -14, "lon": -55}, width=900, height=1100,)
+            fig2.update_layout(title="Indice de Vacinação",
+                            title_font_color="black",
+                            font=dict(
+                                family="arial",
+                                size=14),
+                            template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
+                            margin=dict(b=0))
+            st.plotly_chart(fig2, use_container_width=True)
 
-    new_title = f'<p style="background: #76BCFB; ;width: 100px; height: 100px;font-family:arial; color:Black; font-size: 18px;">Média Obitos BR: {mean_ob: .2f}</p>'
-    col3.markdown(new_title, unsafe_allow_html=True)
 
 def about():
     st.title('Sobre')
