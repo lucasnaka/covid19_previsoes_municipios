@@ -30,15 +30,16 @@ st.sidebar.title('Menu')
 pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
 selected_page = st.sidebar.radio('Paginas', pages)
 
+#suppress_st_warning=True para usar depois e "desaparecer" as mensagens de carregamento
 
-@st.cache
+@st.cache(allow_output_mutation= True)
 def load_data():
-    df_city_deaths = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
-    df_region_deaths = pd.read_parquet('../data/app/covid_saude_obito_regiao.parquet')
-    df_city_states = pd.read_parquet('../data/app/est_cidade.parquet')
-    df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
-    json_file = open('../data/app/cities_shape.json')
+    df_city_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_municipio.parquet')
+    df_region_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_regiao.parquet')
+    df_city_states = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/est_cidade.parquet')
+    df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
+    json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
 
     df_city_deaths['data'] = pd.to_datetime(df_city_deaths['data'])
     df_region_deaths['data'] = pd.to_datetime(df_region_deaths['data'])
@@ -46,6 +47,8 @@ def load_data():
     json_cities_shape = json.load(json_file)
     return df_city_deaths, df_region_deaths, list_states, df_vaccine, df_regional_clusters, json_cities_shape
 
+
+df_casos, df_casos_reg, states, df_vacina, df_clusters, cities_shape = load_data()
 
 @st.cache
 def load_metadata(url):
@@ -59,7 +62,7 @@ def load_metadata(url):
     return json_brazil_shape, feature_loop, dict_state_id_map
 
 
-df_casos, df_casos_reg, states, vacina, df_clusters, cities_shape = load_data()
+
 Brasil, feature, state_id_map = load_metadata(
     'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
 
@@ -103,8 +106,7 @@ def filter_date(df):
 
     return selected_date
 
-
-def common_filters(df_casos, df_casos_reg, df_clusters, cities_shape):
+def common_filters_pred(df_casos, df_casos_reg, df_clusters, cities_shape):
     selected_filters = dict()
     selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
     selected_state, selected_city = filter_state_city()
@@ -131,10 +133,49 @@ def common_filters(df_casos, df_casos_reg, df_clusters, cities_shape):
         df_casos_reg = df_casos_reg.loc[(df_casos_reg['data'].dt.date >= selected_filters['date'][0])
                                         & (df_casos_reg['data'].dt.date <= selected_filters['date'][1])]
 
+
+
     cities_filtered_list = [x for x in cities_shape['features'] if x['properties']['cluster'] == selected_filters['cluster']]
     cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
 
-    return selected_filters, df_filtered, df_casos_reg, cities_shape_filtered
+    return selected_filters, df_filtered,  df_casos_reg, cities_shape_filtered
+
+
+def common_filters_desc(df_casos, df_casos_reg, df_clusters, df_vacina, cities_shape):
+    selected_filters = dict()
+    selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
+    selected_state, selected_city = filter_state_city()
+
+    selected_filters['state'] = selected_state
+    selected_filters['city'] = selected_city
+    selected_filters['cod_city_2'] = df_casos.loc[df_casos['municipio'] == selected_city, 'codmun'].iloc[0]
+    selected_filters['cluster'] = df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_filters['cod_city_2'],
+                                                  'cluster'].iloc[0]
+
+    if selected_filters['city']:
+        df_filtered = df_casos.loc[(df_casos['codmun'] == selected_filters['cod_city_2'])]
+    else:
+        df_filtered = df_casos.loc[(df_casos['municipio'] == 'São Paulo')]
+
+    selected_date_range = filter_date(df_filtered)
+
+    selected_filters['database'] = selected_data
+    selected_filters['date'] = selected_date_range
+
+    if selected_filters['date']:
+        df_filtered = df_filtered.loc[(df_filtered['data'].dt.date >= selected_filters['date'][0])
+                                      & (df_filtered['data'].dt.date <= selected_filters['date'][1])]
+        df_casos_reg = df_casos_reg.loc[(df_casos_reg['data'].dt.date >= selected_filters['date'][0])
+                                        & (df_casos_reg['data'].dt.date <= selected_filters['date'][1])]
+        df_vacina = df_vacina.loc[(df_vacina['data'].dt.date >= selected_filters['date'][0])
+                                        & (df_vacina['data'].dt.date <= selected_filters['date'][1])]
+
+
+
+    cities_filtered_list = [x for x in cities_shape['features'] if x['properties']['cluster'] == selected_filters['cluster']]
+    cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
+
+    return selected_filters, df_filtered,  df_casos_reg, cities_shape_filtered, df_vacina
 
 
 def home():
@@ -144,7 +185,7 @@ def home():
 def predictive_models():
     st.title('Modelos preditivos')
 
-    selected_filters, df_filtered, df_filtered_reg, cities_shape_filtered = common_filters(df_casos, df_casos_reg, df_clusters, cities_shape)
+    selected_filters, df_filtered, df_filtered_reg, cities_shape_filtered = common_filters_pred(df_casos, df_casos_reg, df_clusters,  cities_shape)
 
     with st.beta_container():
         col1, col2 = st.beta_columns([20, 10])
@@ -152,8 +193,7 @@ def predictive_models():
         with col1:
             html_card_header2 = """
             <div class="card">
-            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 550px;
-            height: 50px;">
+            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
                 <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
             </div>
             </div>
@@ -198,7 +238,7 @@ def descriptive_models():
     with st.beta_container():
         col1, col2 = st.beta_columns([20, 10])
 
-        selected_filters, df_filtered, df_filtered_reg, cities_shape_filtered = common_filters(df_casos, df_casos_reg, df_clusters, cities_shape)
+        selected_filters, df_filtered, df_filtered_reg,df_filtered_vacina, cities_shape_filtered = common_filters_desc(df_casos, df_casos_reg, df_clusters, df_vacina, cities_shape)
         # if selected_filters:
         #     st.info(f"{selected_filters}")
 
@@ -206,8 +246,7 @@ def descriptive_models():
         with col1:
             html_card_header1 = """
             <div class="card">
-            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 1350px;
-            height: 50px;">
+            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
                 <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
             </div>
             </div>
@@ -267,8 +306,7 @@ def descriptive_models():
         with col2:
             html_card_header2 = """
             <div class="card">
-            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 550px;
-            height: 50px;">
+            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
                 <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
             </div>
             </div>
@@ -284,7 +322,7 @@ def descriptive_models():
                                                 width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
                                                 paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
             fig2 = px.choropleth_mapbox(
-                vacina,  # banco de dados da soja
+                df_vacina,  # banco de dados da soja
                 locations="Estado",  # definindo os limites no mapa
                 geojson=Brasil,  # definindo as delimitações geográficas
                 color="ind",  # definindo a cor através da base de dados
