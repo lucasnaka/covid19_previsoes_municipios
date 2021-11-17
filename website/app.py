@@ -30,27 +30,31 @@ st.sidebar.title('Menu')
 pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
 selected_page = st.sidebar.radio('Paginas', pages)
 
-#suppress_st_warning=True para usar depois e "desaparecer" as mensagens de carregamento
 
-@st.cache(allow_output_mutation= True)
+# suppress_st_warning=True para usar depois e "desaparecer" as mensagens de carregamento
+
+@st.cache(allow_output_mutation=True)
 def load_data():
-    df_city_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_municipio.parquet')
-    df_region_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_regiao.parquet')
-    df_city_states = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/est_cidade.parquet')
-    df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
-    json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
+    df_city_deaths = pd.read_parquet('../data/app/covid_saude_obito_municipio.parquet')
+    df_region_deaths = pd.read_parquet('../data/app/covid_saude_obito_regiao.parquet')
+    df_city_states = pd.read_parquet('../data/app/est_cidade.parquet')
+    df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
+    json_file = open('../data/app/cities_shape.json')
 
     df_city_deaths['data'] = pd.to_datetime(df_city_deaths['data'])
     df_region_deaths['data'] = pd.to_datetime(df_region_deaths['data'])
+    df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
     list_states = list(df_city_states['estado'].drop_duplicates().sort_values())
     json_cities_shape = json.load(json_file)
-    return df_city_deaths, df_region_deaths, list_states, df_vaccine, df_regional_clusters, json_cities_shape
+    return df_city_deaths, df_region_deaths, list_states, df_city_states, df_vaccine, df_regional_clusters, \
+           json_cities_shape
 
 
-df_casos, df_casos_reg, states, df_vacina, df_clusters, cities_shape = load_data()
+df_casos, df_casos_reg, states, df_city_states, df_vacina, df_clusters, cities_shape = load_data()
 
-@st.cache
+
+@st.cache(allow_output_mutation=True)
 def load_metadata(url):
     with urlopen(url) as response:
         json_brazil_shape = json.load(response)
@@ -60,7 +64,6 @@ def load_metadata(url):
         feature_loop["id"] = feature_loop["properties"]["name"]
         dict_state_id_map[feature_loop["properties"]["sigla"]] = feature_loop["id"]  # definindo a informação do gráfico
     return json_brazil_shape, feature_loop, dict_state_id_map
-
 
 
 Brasil, feature, state_id_map = load_metadata(
@@ -75,7 +78,7 @@ def SetNewsSize(x):
 
 
 def find_cities(selected_states):
-    return list(states[states['UF'] == selected_states]['Município'].sort_values())
+    return list(df_city_states[df_city_states['estado'] == selected_states]['municipio'].sort_values())
 
 
 def filter_state_city():
@@ -106,6 +109,7 @@ def filter_date(df):
 
     return selected_date
 
+
 def common_filters_pred(df_casos, df_casos_reg, df_clusters, cities_shape):
     selected_filters = dict()
     selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
@@ -133,12 +137,11 @@ def common_filters_pred(df_casos, df_casos_reg, df_clusters, cities_shape):
         df_casos_reg = df_casos_reg.loc[(df_casos_reg['data'].dt.date >= selected_filters['date'][0])
                                         & (df_casos_reg['data'].dt.date <= selected_filters['date'][1])]
 
-
-
-    cities_filtered_list = [x for x in cities_shape['features'] if x['properties']['cluster'] == selected_filters['cluster']]
+    cities_filtered_list = [x for x in cities_shape['features'] if
+                            x['properties']['cluster'] == selected_filters['cluster']]
     cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
 
-    return selected_filters, df_filtered,  df_casos_reg, cities_shape_filtered
+    return selected_filters, df_filtered, df_casos_reg, cities_shape_filtered
 
 
 def common_filters_desc(df_casos, df_casos_reg, df_clusters, df_vacina, cities_shape):
@@ -168,14 +171,13 @@ def common_filters_desc(df_casos, df_casos_reg, df_clusters, df_vacina, cities_s
         df_casos_reg = df_casos_reg.loc[(df_casos_reg['data'].dt.date >= selected_filters['date'][0])
                                         & (df_casos_reg['data'].dt.date <= selected_filters['date'][1])]
         df_vacina = df_vacina.loc[(df_vacina['data'].dt.date >= selected_filters['date'][0])
-                                        & (df_vacina['data'].dt.date <= selected_filters['date'][1])]
+                                  & (df_vacina['data'].dt.date <= selected_filters['date'][1])]
 
-
-
-    cities_filtered_list = [x for x in cities_shape['features'] if x['properties']['cluster'] == selected_filters['cluster']]
+    cities_filtered_list = [x for x in cities_shape['features'] if
+                            x['properties']['cluster'] == selected_filters['cluster']]
     cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
 
-    return selected_filters, df_filtered,  df_casos_reg, cities_shape_filtered, df_vacina
+    return selected_filters, df_filtered, df_casos_reg, cities_shape_filtered, df_vacina
 
 
 def home():
@@ -185,7 +187,9 @@ def home():
 def predictive_models():
     st.title('Modelos preditivos')
 
-    selected_filters, df_filtered, df_filtered_reg, cities_shape_filtered = common_filters_pred(df_casos, df_casos_reg, df_clusters,  cities_shape)
+    selected_filters, df_filtered, df_filtered_reg, cities_shape_filtered = common_filters_pred(df_casos, df_casos_reg,
+                                                                                                df_clusters,
+                                                                                                cities_shape)
 
     with st.beta_container():
         col1, col2 = st.beta_columns([20, 10])
@@ -238,7 +242,8 @@ def descriptive_models():
     with st.beta_container():
         col1, col2 = st.beta_columns([20, 10])
 
-        selected_filters, df_filtered, df_filtered_reg,df_filtered_vacina, cities_shape_filtered = common_filters_desc(df_casos, df_casos_reg, df_clusters, df_vacina, cities_shape)
+        selected_filters, df_filtered, df_filtered_reg, df_filtered_vacina, cities_shape_filtered = common_filters_desc(
+            df_casos, df_casos_reg, df_clusters, df_vacina, cities_shape)
         # if selected_filters:
         #     st.info(f"{selected_filters}")
 
