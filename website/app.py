@@ -94,7 +94,7 @@ def filter_aggregation_level():
     selected_reg = None
     selected_state = None
     selected_regsaude = None
-    selected_city = 'São Paulo'
+    selected_city = None
 
     if choose_region:
         selected_reg = st.sidebar.selectbox('Região', list_regions, key="2")
@@ -113,10 +113,6 @@ def filter_aggregation_level():
 
 
 def filter_state_city():
-    choose_city = None
-    selected_state = None
-    selected_city = 'São Paulo'
-
     selected_state = st.sidebar.selectbox('Estado', list_states, key="selectbox_state")
     list_cities = list(df_depara_levels[df_depara_levels['estado'] == selected_state][
                            'municipio'].drop_duplicates().sort_values())
@@ -283,8 +279,8 @@ def descriptive_models():
                                                 width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
                                                 paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
 
-            fig = make_subplots(1, 1)
-
+            # fig = make_subplots(1, 1)
+            #
             # fig.add_trace(
             #     go.Bar(
             #         x=df_weekly_cases_level_up_up['data'],
@@ -315,8 +311,11 @@ def descriptive_models():
                               font=dict(
                                   family="arial",
                                   size=14),
-                              template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
-                              margin=dict(l=20, r=20, b=20, t=30), width=1050, height=350,
+                              template="plotly_white",
+                              plot_bgcolor='rgba(0,0,0,0)',
+                              margin=dict(l=20, r=20, b=20, t=30),
+                              width=1050,
+                              height=350,
                               hoverlabel=dict(
                                   bgcolor="white",
                                   font_size=12,
@@ -325,62 +324,19 @@ def descriptive_models():
                               barmode='overlay',
             )
             st.plotly_chart(fig, use_container_width=False)
-
-            fig = px.bar(df_weekly_cases_level_down,
-                         x=df_weekly_cases_level_down['data'],
-                         y=df_weekly_cases_level_down['percentage_deaths'],
-                         color=level,
-                         # labels={
-                         #     level: "Região",
-                         # },
-                         )
-            # text=df_filtered_reg['percentage_deaths'].apply(lambda x: '{0:1.2f}%'.format(x)))
-            fig.update_layout(yaxis_title="% Óbitos semanais por região",
-                              font=dict(
-                                  family="arial",
-                                  size=14),
-                              template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
-                              margin=dict(l=20, r=20, b=20, t=30), width=1050, height=350)
-
-            st.plotly_chart(fig, use_container_width=False)
-
-        # with col2:
-        #     html_card_header2 = """
-        #     <div class="card">
-        #     <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
-        #         <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
-        #     </div>
-        #     </div>
-        #     """
-        #     st.markdown(html_card_header2, unsafe_allow_html=True)
-        #     mean_ob = 5  # np.mean(df_filtered["obitosNovos"])
-        #     figin = go.Figure().add_trace(go.Indicator(
-        #         mode="number",
-        #         value=mean_ob,
-        #         domain={'row': 1, 'column': 0}))
-        #
-        #     st.plotly_chart(figin.update_layout(autosize=False,
-        #                                         width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
-        #                                         paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
-        #     fig2 = px.choropleth_mapbox(
-        #         df_vacina,  # banco de dados da soja
-        #         locations="Estado",  # definindo os limites no mapa
-        #         geojson=Brasil,  # definindo as delimitações geográficas
-        #         color="ind",  # definindo a cor através da base de dados
-        #         hover_name="Estado",  # pontos que você quer mostrar na caixinha de informação
-        #         hover_data=['Estado', 'ind', 'Latitude', 'Longitude'],
-        #         mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
-        #         zoom=2.5,  # o tamanho do gráfico
-        #         opacity=0.5,  # opacidade da cor do map
-        #         center={"lat": -14, "lon": -55}, width=900, height=1100, )
-        #     fig2.update_layout(title="Indice de Vacinação",
-        #                        title_font_color="black",
-        #                        font=dict(
-        #                            family="arial",
-        #                            size=14),
-        #                        template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
-        #                        margin=dict(b=0))
-        #     st.plotly_chart(fig2, use_container_width=True)
+            
+            fig2 = px.histogram(df_weekly_cases_level_down,
+                                x=df_weekly_cases_level_down['data'],
+                                y=df_weekly_cases_level_down['percentage_deaths'],
+                                color=level,
+                                # labels={
+                                #     "regiao": "Região",
+                                # },
+                                barmode="stack",
+                                histfunc="avg",
+                                barnorm="percent",
+                                nbins=50)
+            st.plotly_chart(fig2, use_container_width=True)
 
 
 def about():
