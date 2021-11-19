@@ -30,27 +30,29 @@ st.sidebar.title('Menu')
 pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
 selected_page = st.sidebar.radio('Paginas', pages)
 
-#suppress_st_warning=True para usar depois e "desaparecer" as mensagens de carregamento
 
-@st.cache(allow_output_mutation= True)
+# suppress_st_warning=True para usar depois e "desaparecer" as mensagens de carregamento
+
+@st.cache(allow_output_mutation=True)
 def load_data():
-    df_city_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_municipio.parquet')
-    df_region_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_regiao.parquet')
-    df_city_states = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/est_cidade.parquet')
-    df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
-    json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
+    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
+    df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
+    df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
+    json_file = open('../data/app/cities_shape.json')
 
-    df_city_deaths['data'] = pd.to_datetime(df_city_deaths['data'])
-    df_region_deaths['data'] = pd.to_datetime(df_region_deaths['data'])
-    list_states = list(df_city_states['estado'].drop_duplicates().sort_values())
+    df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
+    list_regions = list(df_depara_levels['regiao'].drop_duplicates().sort_values())
+    list_states = list(df_depara_levels['estado'].drop_duplicates().sort_values())
     json_cities_shape = json.load(json_file)
-    return df_city_deaths, df_region_deaths, list_states, df_vaccine, df_regional_clusters, json_cities_shape
+    return list_regions, list_states, df_depara_levels, df_vaccine, df_regional_clusters, \
+           json_cities_shape, df_weekly_deaths
 
 
-df_casos, df_casos_reg, states, df_vacina, df_clusters, cities_shape = load_data()
+list_regions, list_states, df_depara_levels, df_vacina, df_clusters, cities_shape, df_weekly_deaths = load_data()
 
-@st.cache
+
+@st.cache(allow_output_mutation=True)
 def load_metadata(url):
     with urlopen(url) as response:
         json_brazil_shape = json.load(response)
@@ -59,12 +61,11 @@ def load_metadata(url):
     for feature_loop in json_brazil_shape["features"]:
         feature_loop["id"] = feature_loop["properties"]["name"]
         dict_state_id_map[feature_loop["properties"]["sigla"]] = feature_loop["id"]  # definindo a informação do gráfico
-    return json_brazil_shape, feature_loop, dict_state_id_map
+    return json_brazil_shape, dict_state_id_map
 
 
-
-Brasil, feature, state_id_map = load_metadata(
-    'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
+# Brasil, state_id_map = load_metadata(
+#     'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
 
 
 def SetNewsSize(x):
@@ -74,21 +75,48 @@ def SetNewsSize(x):
         return 0
 
 
-def find_cities(selected_states):
-    return list(states[states['UF'] == selected_states]['Município'].sort_values())
+def find_level_divisions(level, selected_division):
+    if level == 'region':
+        return list(
+            df_depara_levels[df_depara_levels['regiao'] == selected_division]['estado'].drop_duplicates().sort_values())
+    elif level == 'state':
+        return list(df_depara_levels[df_depara_levels['estado'] == selected_division][
+                        'nomeRegiaoSaude'].drop_duplicates().sort_values())
+    return list(df_depara_levels[df_depara_levels['nomeRegiaoSaude'] == selected_division][
+                    'municipio'].drop_duplicates().sort_values())
+
+
+def filter_aggregation_level():
+    choose_region = st.sidebar.checkbox('Filtrar por região', key="1")
+    choose_state = None
+    choose_rs = None
+    choose_city = None
+    selected_reg = None
+    selected_state = None
+    selected_regsaude = None
+    selected_city = None
+
+    if choose_region:
+        selected_reg = st.sidebar.selectbox('Região', list_regions, key="2")
+        choose_state = st.sidebar.checkbox('Filtrar por estado', key="3")
+    if choose_state:
+        selected_state = st.sidebar.selectbox('Estado', find_level_divisions('region', selected_reg), key="4")
+        choose_rs = st.sidebar.checkbox('Filtrar por regional de saúde', key="5")
+    if choose_rs:
+        selected_regsaude = st.sidebar.selectbox('Regional de saúde', find_level_divisions('state', selected_state),
+                                                 key="6")
+        choose_city = st.sidebar.checkbox('Filtrar por cidade', key="7")
+    if choose_city:
+        selected_city = st.sidebar.selectbox('Cidade', find_level_divisions('regsaude', selected_regsaude), key="8")
+
+    return selected_reg, selected_state, selected_regsaude, selected_city
 
 
 def filter_state_city():
-    choose_state = st.sidebar.checkbox('Filtrar por estado')
-    choose_city = None
-    selected_state = None
-    selected_city = 'São Paulo'
-
-    if choose_state:
-        selected_state = st.sidebar.selectbox('Estado', states)
-        choose_city = st.sidebar.checkbox('Filtrar por cidade')
-    if choose_city:
-        selected_city = st.sidebar.selectbox('Cidade', find_cities(selected_state))
+    selected_state = st.sidebar.selectbox('Estado', list_states, key="selectbox_state")
+    list_cities = list(df_depara_levels[df_depara_levels['estado'] == selected_state][
+                           'municipio'].drop_duplicates().sort_values())
+    selected_city = st.sidebar.selectbox('Cidade', list_cities, key="selectbox_city")
 
     return selected_state, selected_city
 
@@ -106,76 +134,82 @@ def filter_date(df):
 
     return selected_date
 
-def common_filters_pred(df_casos, df_casos_reg, df_clusters, cities_shape):
+
+def common_filters_pred(df_clusters, cities_shape, df_weekly_cases):
     selected_filters = dict()
-    selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
     selected_state, selected_city = filter_state_city()
 
-    selected_filters['state'] = selected_state
-    selected_filters['city'] = selected_city
-    selected_filters['cod_city_2'] = df_casos.loc[df_casos['municipio'] == selected_city, 'codmun'].iloc[0]
-    selected_filters['cluster'] = df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_filters['cod_city_2'],
-                                                  'cluster'].iloc[0]
+    selected_filters['cod_city_2'] = df_weekly_cases.loc[df_weekly_cases['municipio'] == selected_city, 'codmun'].iloc[
+        0]
+    selected_filters['cluster'] = \
+    df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_filters['cod_city_2'], 'cluster'].iloc[0]
 
-    if selected_filters['city']:
-        df_filtered = df_casos.loc[(df_casos['codmun'] == selected_filters['cod_city_2'])]
-    else:
-        df_filtered = df_casos.loc[(df_casos['municipio'] == 'São Paulo')]
-
-    selected_date_range = filter_date(df_filtered)
-
-    selected_filters['database'] = selected_data
-    selected_filters['date'] = selected_date_range
-
-    if selected_filters['date']:
-        df_filtered = df_filtered.loc[(df_filtered['data'].dt.date >= selected_filters['date'][0])
-                                      & (df_filtered['data'].dt.date <= selected_filters['date'][1])]
-        df_casos_reg = df_casos_reg.loc[(df_casos_reg['data'].dt.date >= selected_filters['date'][0])
-                                        & (df_casos_reg['data'].dt.date <= selected_filters['date'][1])]
-
-
-
-    cities_filtered_list = [x for x in cities_shape['features'] if x['properties']['cluster'] == selected_filters['cluster']]
+    cities_filtered_list = [x for x in cities_shape['features'] if
+                            x['properties']['cluster'] == selected_filters['cluster']]
     cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
 
-    return selected_filters, df_filtered,  df_casos_reg, cities_shape_filtered
+    return selected_filters, cities_shape_filtered
 
 
-def common_filters_desc(df_casos, df_casos_reg, df_clusters, df_vacina, cities_shape):
+def common_filters_desc(df_vacina, df_weekly_cases):
     selected_filters = dict()
     selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
-    selected_state, selected_city = filter_state_city()
+    selected_reg, selected_state, selected_regsaude, selected_city = filter_aggregation_level()
 
-    selected_filters['state'] = selected_state
-    selected_filters['city'] = selected_city
-    selected_filters['cod_city_2'] = df_casos.loc[df_casos['municipio'] == selected_city, 'codmun'].iloc[0]
-    selected_filters['cluster'] = df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_filters['cod_city_2'],
-                                                  'cluster'].iloc[0]
-
-    if selected_filters['city']:
-        df_filtered = df_casos.loc[(df_casos['codmun'] == selected_filters['cod_city_2'])]
+    if selected_reg:
+        if selected_state:
+            if selected_regsaude:
+                if selected_city:
+                    df_weekly_cases_level_up_up = df_weekly_cases.loc[df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
+                    df_weekly_cases_level_up = df_weekly_cases.loc[(df_weekly_cases['municipio'] == selected_city)]
+                    df_weekly_cases_level_down = df_weekly_cases_level_up.copy()
+                    level = 'municipio'
+                else:
+                    df_weekly_cases_level_up_up = df_weekly_cases.loc[df_weekly_cases['estado'] == selected_state]
+                    df_weekly_cases_level_up = df_weekly_cases.loc[df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
+                    df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['municipio'].notna())]
+                    level = 'municipio'
+            else:
+                df_weekly_cases_level_up_up = df_weekly_cases.loc[df_weekly_cases['regiao'] == selected_reg]
+                df_weekly_cases_level_up = df_weekly_cases.loc[(df_weekly_cases['estado'] == selected_state)]
+                df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['nomeRegiaoSaude'].notna())]
+                level = 'nomeRegiaoSaude'
+        else:
+            df_weekly_cases_level_up_up = df_weekly_cases.loc[
+                (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
+                    df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
+            df_weekly_cases_level_up = df_weekly_cases.loc[(df_weekly_cases['regiao'] == selected_reg)]
+            df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['estado'].notna())]
+            level = 'estado'
     else:
-        df_filtered = df_casos.loc[(df_casos['municipio'] == 'São Paulo')]
+        df_weekly_cases_level_up_up = df_weekly_cases.loc[
+            (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
+                df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
+        df_weekly_cases_level_up = df_weekly_cases.loc[
+            (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
+                df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
+        df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['regiao'].notna())]
+        level = 'regiao'
 
-    selected_date_range = filter_date(df_filtered)
+    selected_date_range = filter_date(df_weekly_cases_level_up)
 
     selected_filters['database'] = selected_data
     selected_filters['date'] = selected_date_range
 
     if selected_filters['date']:
-        df_filtered = df_filtered.loc[(df_filtered['data'].dt.date >= selected_filters['date'][0])
-                                      & (df_filtered['data'].dt.date <= selected_filters['date'][1])]
-        df_casos_reg = df_casos_reg.loc[(df_casos_reg['data'].dt.date >= selected_filters['date'][0])
-                                        & (df_casos_reg['data'].dt.date <= selected_filters['date'][1])]
         df_vacina = df_vacina.loc[(df_vacina['data'].dt.date >= selected_filters['date'][0])
-                                        & (df_vacina['data'].dt.date <= selected_filters['date'][1])]
+                                  & (df_vacina['data'].dt.date <= selected_filters['date'][1])]
+        df_weekly_cases_level_up_up = df_weekly_cases_level_up_up.loc[
+            (df_weekly_cases_level_up_up['data'].dt.date >= selected_filters['date'][0])
+            & (df_weekly_cases_level_up_up['data'].dt.date <= selected_filters['date'][1])]
+        df_weekly_cases_level_up = df_weekly_cases_level_up.loc[
+            (df_weekly_cases_level_up['data'].dt.date >= selected_filters['date'][0])
+            & (df_weekly_cases_level_up['data'].dt.date <= selected_filters['date'][1])]
+        df_weekly_cases_level_down = df_weekly_cases_level_down.loc[
+            (df_weekly_cases_level_down['data'].dt.date >= selected_filters['date'][0])
+            & (df_weekly_cases_level_down['data'].dt.date <= selected_filters['date'][1])]
 
-
-
-    cities_filtered_list = [x for x in cities_shape['features'] if x['properties']['cluster'] == selected_filters['cluster']]
-    cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
-
-    return selected_filters, df_filtered,  df_casos_reg, cities_shape_filtered, df_vacina
+    return selected_filters, level, df_vacina, df_weekly_cases_level_up_up, df_weekly_cases_level_up, df_weekly_cases_level_down
 
 
 def home():
@@ -185,60 +219,42 @@ def home():
 def predictive_models():
     st.title('Modelos preditivos')
 
-    selected_filters, df_filtered, df_filtered_reg, cities_shape_filtered = common_filters_pred(df_casos, df_casos_reg, df_clusters,  cities_shape)
+    selected_filters, cities_shape_filtered = common_filters_pred(df_clusters,
+                                                                  cities_shape,
+                                                                  df_weekly_deaths)
 
-    with st.beta_container():
-        col1, col2 = st.beta_columns([20, 10])
-
-        with col1:
-            html_card_header2 = """
-            <div class="card">
-            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
-                <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
-            </div>
-            </div>
-            """
-            st.markdown(html_card_header2, unsafe_allow_html=True)
-            mean_ob = np.mean(df_filtered["obitosNovos"])
-            figin = go.Figure().add_trace(go.Indicator(
-                mode="number",
-                value=mean_ob,
-                domain={'row': 1, 'column': 0}))
-
-            st.plotly_chart(figin.update_layout(autosize=False,
-                                                width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
-                                                paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
-            fig = px.choropleth_mapbox(
-                df_clusters,  # banco de dados da soja
-                locations="codarea",  # definindo os limites no mapa
-                featureidkey="properties.codarea",
-                geojson=cities_shape_filtered,  # definindo as delimitações geográficas
-                #     color="cluster", # definindo a cor através da base de dados
-                hover_name="Município",  # pontos que você quer mostrar na caixinha de informação
-                hover_data=['Município', 'cluster'],
-                title='Indice de Letalitade por Região',
-                mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
-                zoom=3,  # o tamanho do gráfico
-                opacity=0.5,  # opacidade da cor do map
-                center={"lat": -14, "lon": -55},
-                width=1000, height=900, )
-            fig.update_layout(title="Cidades similares",
-                              title_font_color="black",
-                              font=dict(
-                                  family="arial",
-                                  size=14),
-                              template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
-                              margin=dict(b=0))
-            st.plotly_chart(fig, use_container_width=True)
+    fig = px.choropleth_mapbox(
+        df_clusters,  # banco de dados da soja
+        locations="codarea",  # definindo os limites no mapa
+        featureidkey="properties.codarea",
+        geojson=cities_shape_filtered,  # definindo as delimitações geográficas
+        #     color="cluster", # definindo a cor através da base de dados
+        hover_name="Município",  # pontos que você quer mostrar na caixinha de informação
+        hover_data=['Município', 'cluster'],
+        title='Indice de Letalitade por Região',
+        mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
+        zoom=3,  # o tamanho do gráfico
+        opacity=0.5,  # opacidade da cor do map
+        center={"lat": -14, "lon": -55},
+        width=1000, height=900, )
+    fig.update_layout(title="Cidades similares",
+                      title_font_color="black",
+                      font=dict(
+                          family="arial",
+                          size=14),
+                      template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
+                      margin=dict(b=0))
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def descriptive_models():
     st.header('Modelos descritivos')
 
     with st.beta_container():
-        col1, col2 = st.beta_columns([20, 10])
+        col1, col2 = st.beta_columns(2)
 
-        selected_filters, df_filtered, df_filtered_reg,df_filtered_vacina, cities_shape_filtered = common_filters_desc(df_casos, df_casos_reg, df_clusters, df_vacina, cities_shape)
+        selected_filters, level, df_filtered_vacina, df_weekly_cases_level_up_up, df_weekly_cases_level_up, df_weekly_cases_level_down = common_filters_desc(
+            df_vacina, df_weekly_deaths)
         # if selected_filters:
         #     st.info(f"{selected_filters}")
 
@@ -247,12 +263,13 @@ def descriptive_models():
             html_card_header1 = """
             <div class="card">
             <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
-                <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
+                <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Óbitos semanais (última data selecionada):</h3>
             </div>
             </div>
             """
             st.markdown(html_card_header1, unsafe_allow_html=True)
-            mean_ob = np.mean(df_filtered["obitosNovos"])
+            mean_ob = np.mean(df_weekly_cases_level_up.loc[df_weekly_cases_level_up['week_number'] ==
+                                                           df_weekly_cases_level_up['week_number'].max(), "new_deaths_week_division"])
             figin = go.Figure().add_trace(go.Indicator(
                 mode="number",
                 value=mean_ob,
@@ -262,75 +279,64 @@ def descriptive_models():
                                                 width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
                                                 paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
 
-            fig = go.Figure()
+            # fig = make_subplots(1, 1)
+            #
+            # fig.add_trace(
+            #     go.Bar(
+            #         x=df_weekly_cases_level_up_up['data'],
+            #         y=df_weekly_cases_level_up_up['new_deaths_week_division'],
+            #         customdata=df_weekly_cases_level_up_up['noticia'].to_numpy(),
+            #         text=df_weekly_cases_level_up_up['data'],
+            #         hoverinfo='text',
+            #         hovertemplate='%{customdata}'
+            #     )
+            # )
 
-            fig.add_trace(go.Scatter(x=df_filtered["data"],
-                                     y=df_filtered["obitosNovos"],
-                                     text=df_filtered['texto'],
-                                     hoverinfo='text',
-                                     mode='lines+markers',
-                                     marker=dict(size=list(map(SetNewsSize, df_filtered['texto'])),
-                                                 color=['orange'] * df_filtered.shape[0]),
-                                     )
-                          )
+            fig = px.bar(df_weekly_cases_level_up_up,
+                         x=df_weekly_cases_level_up_up['data'],
+                         y=df_weekly_cases_level_up_up['new_deaths_week_division'],
+                         custom_data=[df_weekly_cases_level_up_up['noticia']],
+                         )
 
-            fig.update_layout(title="Óbitos diários",
-                              title_font_color="black",
-                              yaxis_title="Número de óbitos",
+            fig.add_bar(
+                       x=df_weekly_cases_level_up['data'],
+                       y=df_weekly_cases_level_up['new_deaths_week_division'],
+            )
+
+            fig.update_traces(
+                hovertemplate="%{customdata[0]}"
+            )
+
+            fig.update_layout(yaxis_title="Óbitos semanais",
                               font=dict(
                                   family="arial",
                                   size=14),
-                              template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
-                              margin=dict(l=20, r=20, b=20, t=30), width=1050, height=590)
-
-            st.plotly_chart(fig, use_container_width=True)
-
-            fig = go.Figure()
-            fig = px.bar(df_filtered_reg,
-                         x=df_filtered_reg['data'],
-                         y=df_filtered_reg['percentage_deaths'],
-                         color='regiao', 
-                         labels={
-                             "regiao": "Região",
-                         }, height=400)
+                              template="plotly_white",
+                              plot_bgcolor='rgba(0,0,0,0)',
+                              margin=dict(l=20, r=20, b=20, t=30),
+                              width=1050,
+                              height=350,
+                              hoverlabel=dict(
+                                  bgcolor="white",
+                                  font_size=12,
+                                  font_family="Rockwell"
+                              ),
+                              barmode='overlay',
+            )
+            st.plotly_chart(fig, use_container_width=False)
             
-
-            
-            # text=df_filtered_reg['percentage_deaths'].apply(lambda x: '{0:1.2f}%'.format(x)))
-            fig.update_layout(yaxis_title="% Óbitos semanais por região", 
-                              font=dict(
-                                  family="arial",
-                                  size=14),
-                              template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
-                              margin=dict(l=20, r=20, b=20, t=30), width=1050, height=550)
-
-            st.plotly_chart(fig, use_container_width=True)
-            
-            fig2 = px.histogram(df_filtered_reg, x=df_filtered_reg['data'], y =df_filtered_reg['percentage_deaths'],
-                         color="regiao", labels={
-                             "regiao": "Região",
-                         },barmode="stack", histfunc = "avg", barnorm = "percent", nbins=50 )
+            fig2 = px.histogram(df_weekly_cases_level_down,
+                                x=df_weekly_cases_level_down['data'],
+                                y=df_weekly_cases_level_down['percentage_deaths'],
+                                color=level,
+                                # labels={
+                                #     "regiao": "Região",
+                                # },
+                                barmode="stack",
+                                histfunc="avg",
+                                barnorm="percent",
+                                nbins=50)
             st.plotly_chart(fig2, use_container_width=True)
-
-
-        with col2:
-            html_card_header2 = """
-            <div class="card">
-            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
-                <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Média Obitos BR:</h3>
-            </div>
-            </div>
-            """
-            st.markdown(html_card_header2, unsafe_allow_html=True)
-            mean_ob = np.mean(df_filtered["obitosNovos"])
-            figin = go.Figure().add_trace(go.Indicator(
-                mode="number",
-                value=mean_ob,
-                domain={'row': 1, 'column': 0}))
-
-            st.plotly_chart(figin.update_layout(autosize=False,
-                                                width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
-                                                paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
 
 
 def about():
@@ -365,7 +371,7 @@ def about():
 
 
 if selected_page == 'Início':
-    home()
+    about()
 elif selected_page == 'Modelos preditivos':
     predictive_models()
 elif selected_page == 'Modelos descritivos':
