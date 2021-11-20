@@ -16,6 +16,11 @@ import datetime as dt
 from urllib.request import urlopen
 import json
 
+
+
+
+# specify the primary menu definition
+
 st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
@@ -26,20 +31,23 @@ matplotlib.use("Agg")
 
 st.title("Previsão de Obitos COVID-19 - ICMC/MECAI - USP")
 
+
 st.sidebar.title('Menu')
 pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
 selected_page = st.sidebar.radio('Paginas', pages)
+
+
 
 
 # suppress_st_warning=True para usar depois e "desaparecer" as mensagens de carregamento
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
-    df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
-    df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
-    json_file = open('../data/app/cities_shape.json')
+    df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_grouped.parquet')
+    df_depara_levels = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/depara_levels.parquet')
+    df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
+    json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
 
     df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
     list_regions = list(df_depara_levels['regiao'].drop_duplicates().sort_values())
@@ -251,32 +259,26 @@ def descriptive_models():
     st.header('Modelos descritivos')
 
     with st.beta_container():
-        col1, col2 = st.beta_columns(2)
-
         selected_filters, level, df_filtered_vacina, df_weekly_cases_level_up_up, df_weekly_cases_level_up, df_weekly_cases_level_down = common_filters_desc(
             df_vacina, df_weekly_deaths)
-        # if selected_filters:
-        #     st.info(f"{selected_filters}")
 
-        #     st.title('Número de óbitos por dia')
-        with col1:
-            html_card_header1 = """
+        html_card_header1 = """
             <div class="card">
             <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
                 <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Óbitos semanais (última data selecionada):</h3>
             </div>
             </div>
             """
-            st.markdown(html_card_header1, unsafe_allow_html=True)
-            mean_ob = np.mean(df_weekly_cases_level_up.loc[df_weekly_cases_level_up['week_number'] ==
+        st.markdown(html_card_header1, unsafe_allow_html=True)
+        mean_ob = np.mean(df_weekly_cases_level_up.loc[df_weekly_cases_level_up['week_number'] ==
                                                            df_weekly_cases_level_up['week_number'].max(), "new_deaths_week_division"])
-            figin = go.Figure().add_trace(go.Indicator(
+        figin = go.Figure().add_trace(go.Indicator(
                 mode="number",
                 value=mean_ob,
                 domain={'row': 1, 'column': 0}))
 
-            st.plotly_chart(figin.update_layout(autosize=False,
-                                                width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
+        st.plotly_chart(figin.update_layout(autosize=False,
+                                                width=150, height=90, margin=dict(l=10, r=10, b=20, t=30),
                                                 paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
 
             # fig = make_subplots(1, 1)
@@ -292,40 +294,44 @@ def descriptive_models():
             #     )
             # )
 
-            fig = px.bar(df_weekly_cases_level_up_up,
+            #fig = px.bar(df_weekly_cases_level_up_up,
+             #            x=df_weekly_cases_level_up_up['data'],
+              #           y=df_weekly_cases_level_up_up['new_deaths_week_division'],
+               #          custom_data=[df_weekly_cases_level_up_up['noticia']],
+                #         )
+
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(
+                                       x=df_weekly_cases_level_up['data'],
+                                       y =df_weekly_cases_level_up['new_deaths_week_division'],histfunc="avg", nbinsx=50))
+        fig.add_trace(go.Histogram(
                          x=df_weekly_cases_level_up_up['data'],
-                         y=df_weekly_cases_level_up_up['new_deaths_week_division'],
-                         custom_data=[df_weekly_cases_level_up_up['noticia']],
-                         )
+                         y=df_weekly_cases_level_up_up['new_deaths_week_division'], histfunc="avg", nbinsx=50))
+            
 
-            fig.add_bar(
-                       x=df_weekly_cases_level_up['data'],
-                       y=df_weekly_cases_level_up['new_deaths_week_division'],
-            )
 
-            fig.update_traces(
-                hovertemplate="%{customdata[0]}"
-            )
+            # Overlay both histograms
+            # Reduce opacity to see both histograms
+        fig.update_traces(opacity=0.55, hovertemplate=df_weekly_cases_level_up_up['noticia'], selector=dict(type="histogram"))
 
-            fig.update_layout(yaxis_title="Óbitos semanais",
+        fig.update_layout(yaxis_title="Óbitos semanais",
                               font=dict(
                                   family="arial",
                                   size=14),
                               template="plotly_white",
                               plot_bgcolor='rgba(0,0,0,0)',
                               margin=dict(l=20, r=20, b=20, t=30),
-                              width=1050,
-                              height=350,
+                              width=1650,
+                              height=350, barmode='stack',
                               hoverlabel=dict(
                                   bgcolor="white",
-                                  font_size=12,
+                                  font_size=14,
                                   font_family="Rockwell"
-                              ),
-                              barmode='overlay',
-            )
-            st.plotly_chart(fig, use_container_width=False)
+                              ))
+
+        st.plotly_chart(fig, use_container_width=False)
             
-            fig2 = px.histogram(df_weekly_cases_level_down,
+        fig2 = px.histogram(df_weekly_cases_level_down,
                                 x=df_weekly_cases_level_down['data'],
                                 y=df_weekly_cases_level_down['percentage_deaths'],
                                 color=level,
@@ -336,7 +342,7 @@ def descriptive_models():
                                 histfunc="avg",
                                 barnorm="percent",
                                 nbins=50)
-            st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, use_container_width=True)
 
 
 def about():
