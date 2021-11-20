@@ -15,6 +15,7 @@ import numpy as np
 import datetime as dt
 from urllib.request import urlopen
 import json
+from ipywidgets import Output, VBox
 
 st.set_page_config(
     layout="wide",
@@ -42,6 +43,7 @@ def load_data():
     json_file = open('../data/app/cities_shape.json')
 
     df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
+    df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
     list_regions = list(df_depara_levels['regiao'].drop_duplicates().sort_values())
     list_states = list(df_depara_levels['estado'].drop_duplicates().sort_values())
     json_cities_shape = json.load(json_file)
@@ -142,7 +144,7 @@ def common_filters_pred(df_clusters, cities_shape, df_weekly_cases):
     selected_filters['cod_city_2'] = df_weekly_cases.loc[df_weekly_cases['municipio'] == selected_city, 'codmun'].iloc[
         0]
     selected_filters['cluster'] = \
-    df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_filters['cod_city_2'], 'cluster'].iloc[0]
+        df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_filters['cod_city_2'], 'cluster'].iloc[0]
 
     cities_filtered_list = [x for x in cities_shape['features'] if
                             x['properties']['cluster'] == selected_filters['cluster']]
@@ -160,38 +162,55 @@ def common_filters_desc(df_vacina, df_weekly_cases):
         if selected_state:
             if selected_regsaude:
                 if selected_city:
-                    df_weekly_cases_level_up_up = df_weekly_cases.loc[df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
-                    df_weekly_cases_level_up = df_weekly_cases.loc[(df_weekly_cases['municipio'] == selected_city)]
-                    df_weekly_cases_level_down = df_weekly_cases_level_up.copy()
+                    df_weekly_cases_level_up = df_weekly_cases.loc[
+                        df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
+                    df_weekly_cases_level_selected = df_weekly_cases.loc[
+                        (df_weekly_cases['municipio'] == selected_city)]
+                    cities_at_this_level = df_depara_levels.loc[
+                        df_depara_levels['nomeRegiaoSaude'] == selected_regsaude, 'municipio'].unique()
+                    df_weekly_cases_level_down = df_weekly_cases.loc[
+                        (df_weekly_cases['municipio'].isin(cities_at_this_level)) & (
+                            df_weekly_cases['municipio'].notna())]
                     level = 'municipio'
                 else:
-                    df_weekly_cases_level_up_up = df_weekly_cases.loc[df_weekly_cases['estado'] == selected_state]
-                    df_weekly_cases_level_up = df_weekly_cases.loc[df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
-                    df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['municipio'].notna())]
+                    df_weekly_cases_level_up = df_weekly_cases.loc[df_weekly_cases['estado'] == selected_state]
+                    df_weekly_cases_level_selected = df_weekly_cases.loc[
+                        df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
+                    cities_at_this_level = df_depara_levels.loc[
+                        df_depara_levels['nomeRegiaoSaude'] == selected_regsaude, 'municipio'].unique()
+                    df_weekly_cases_level_down = df_weekly_cases.loc[
+                        (df_weekly_cases['municipio'].isin(cities_at_this_level)) & (
+                            df_weekly_cases['municipio'].notna())]
                     level = 'municipio'
             else:
-                df_weekly_cases_level_up_up = df_weekly_cases.loc[df_weekly_cases['regiao'] == selected_reg]
-                df_weekly_cases_level_up = df_weekly_cases.loc[(df_weekly_cases['estado'] == selected_state)]
-                df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['nomeRegiaoSaude'].notna())]
+                df_weekly_cases_level_up = df_weekly_cases.loc[df_weekly_cases['regiao'] == selected_reg]
+                df_weekly_cases_level_selected = df_weekly_cases.loc[(df_weekly_cases['estado'] == selected_state)]
+                regsaude_at_this_level = df_depara_levels.loc[
+                    df_depara_levels['estado'] == selected_state, 'nomeRegiaoSaude'].unique()
+                df_weekly_cases_level_down = df_weekly_cases.loc[
+                    (df_weekly_cases['nomeRegiaoSaude'].isin(regsaude_at_this_level)) & (
+                        df_weekly_cases['nomeRegiaoSaude'].notna())]
                 level = 'nomeRegiaoSaude'
         else:
-            df_weekly_cases_level_up_up = df_weekly_cases.loc[
+            df_weekly_cases_level_up = df_weekly_cases.loc[
                 (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
                     df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
-            df_weekly_cases_level_up = df_weekly_cases.loc[(df_weekly_cases['regiao'] == selected_reg)]
-            df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['estado'].notna())]
+            df_weekly_cases_level_selected = df_weekly_cases.loc[(df_weekly_cases['regiao'] == selected_reg)]
+            states_at_this_level = df_depara_levels.loc[df_depara_levels['regiao'] == selected_reg, 'estado'].unique()
+            df_weekly_cases_level_down = df_weekly_cases.loc[
+                (df_weekly_cases['estado'].isin(states_at_this_level)) & (df_weekly_cases['estado'].notna())]
             level = 'estado'
     else:
-        df_weekly_cases_level_up_up = df_weekly_cases.loc[
+        df_weekly_cases_level_up = df_weekly_cases.loc[
             (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
                 df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
-        df_weekly_cases_level_up = df_weekly_cases.loc[
+        df_weekly_cases_level_selected = df_weekly_cases.loc[
             (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
                 df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
         df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['regiao'].notna())]
         level = 'regiao'
 
-    selected_date_range = filter_date(df_weekly_cases_level_up)
+    selected_date_range = filter_date(df_weekly_cases_level_selected)
 
     selected_filters['database'] = selected_data
     selected_filters['date'] = selected_date_range
@@ -199,17 +218,17 @@ def common_filters_desc(df_vacina, df_weekly_cases):
     if selected_filters['date']:
         df_vacina = df_vacina.loc[(df_vacina['data'].dt.date >= selected_filters['date'][0])
                                   & (df_vacina['data'].dt.date <= selected_filters['date'][1])]
-        df_weekly_cases_level_up_up = df_weekly_cases_level_up_up.loc[
-            (df_weekly_cases_level_up_up['data'].dt.date >= selected_filters['date'][0])
-            & (df_weekly_cases_level_up_up['data'].dt.date <= selected_filters['date'][1])]
         df_weekly_cases_level_up = df_weekly_cases_level_up.loc[
             (df_weekly_cases_level_up['data'].dt.date >= selected_filters['date'][0])
             & (df_weekly_cases_level_up['data'].dt.date <= selected_filters['date'][1])]
+        df_weekly_cases_level_selected = df_weekly_cases_level_selected.loc[
+            (df_weekly_cases_level_selected['data'].dt.date >= selected_filters['date'][0])
+            & (df_weekly_cases_level_selected['data'].dt.date <= selected_filters['date'][1])]
         df_weekly_cases_level_down = df_weekly_cases_level_down.loc[
             (df_weekly_cases_level_down['data'].dt.date >= selected_filters['date'][0])
             & (df_weekly_cases_level_down['data'].dt.date <= selected_filters['date'][1])]
 
-    return selected_filters, level, df_vacina, df_weekly_cases_level_up_up, df_weekly_cases_level_up, df_weekly_cases_level_down
+    return selected_filters, level, df_vacina, df_weekly_cases_level_up, df_weekly_cases_level_selected, df_weekly_cases_level_down
 
 
 def home():
@@ -253,7 +272,7 @@ def descriptive_models():
     with st.beta_container():
         col1, col2 = st.beta_columns(2)
 
-        selected_filters, level, df_filtered_vacina, df_weekly_cases_level_up_up, df_weekly_cases_level_up, df_weekly_cases_level_down = common_filters_desc(
+        selected_filters, level, df_filtered_vacina, df_weekly_cases_level_up, df_weekly_cases_level_selected, df_weekly_cases_level_down = common_filters_desc(
             df_vacina, df_weekly_deaths)
         # if selected_filters:
         #     st.info(f"{selected_filters}")
@@ -268,8 +287,9 @@ def descriptive_models():
             </div>
             """
             st.markdown(html_card_header1, unsafe_allow_html=True)
-            mean_ob = np.mean(df_weekly_cases_level_up.loc[df_weekly_cases_level_up['week_number'] ==
-                                                           df_weekly_cases_level_up['week_number'].max(), "new_deaths_week_division"])
+            mean_ob = np.mean(df_weekly_cases_level_selected.loc[df_weekly_cases_level_selected['week_number'] ==
+                                                                 df_weekly_cases_level_selected[
+                                                                     'week_number'].max(), "new_deaths_week_division"])
             figin = go.Figure().add_trace(go.Indicator(
                 mode="number",
                 value=mean_ob,
@@ -283,28 +303,31 @@ def descriptive_models():
             #
             # fig.add_trace(
             #     go.Bar(
-            #         x=df_weekly_cases_level_up_up['data'],
-            #         y=df_weekly_cases_level_up_up['new_deaths_week_division'],
-            #         customdata=df_weekly_cases_level_up_up['noticia'].to_numpy(),
-            #         text=df_weekly_cases_level_up_up['data'],
+            #         x=df_weekly_cases_level_up['data'],
+            #         y=df_weekly_cases_level_up['new_deaths_week_division'],
+            #         customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
+            #         text=df_weekly_cases_level_up['data'],
             #         hoverinfo='text',
             #         hovertemplate='%{customdata}'
             #     )
             # )
 
-            fig = px.bar(df_weekly_cases_level_up_up,
-                         x=df_weekly_cases_level_up_up['data'],
-                         y=df_weekly_cases_level_up_up['new_deaths_week_division'],
-                         custom_data=[df_weekly_cases_level_up_up['noticia']],
-                         )
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=df_weekly_cases_level_up['data'],
+                        y=df_weekly_cases_level_up['new_deaths_week_division'],
+                        customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
+                        )
+            )
 
-            fig.add_bar(
-                       x=df_weekly_cases_level_up['data'],
-                       y=df_weekly_cases_level_up['new_deaths_week_division'],
+            fig.add_trace(go.Bar(
+                x=df_weekly_cases_level_selected['data'],
+                y=df_weekly_cases_level_selected['new_deaths_week_division'],
+                customdata=df_weekly_cases_level_selected['noticia'].to_numpy(),
+            )
             )
 
             fig.update_traces(
-                hovertemplate="%{customdata[0]}"
+                hovertemplate="%{customdata}",
             )
 
             fig.update_layout(yaxis_title="Óbitos semanais",
@@ -322,9 +345,33 @@ def descriptive_models():
                                   font_family="Rockwell"
                               ),
                               barmode='overlay',
-            )
+                              )
             st.plotly_chart(fig, use_container_width=False)
-            
+
+            # Plot stacked bar with percentage of deaths per region per week
+            # stacked_bar = fig.add_bar(x=df_weekly_cases_level_down['data'],
+            #                           y=df_weekly_cases_level_down['percentage_deaths'],
+            #                           name=level,
+            #                                 )
+            data = [go.Bar(name=group,
+                           x=dfg['data'],
+                           y=dfg['percentage_deaths'])
+                           for group, dfg in df_weekly_cases_level_down.groupby(by=level)]
+
+            stacked_bar = go.FigureWidget(data=data)
+            stacked_bar.update_layout(barmode='stack')
+
+            st.plotly_chart(stacked_bar, use_container_width=False)
+
+            out = Output()
+
+            @out.capture(clear_output=False)
+            def handle_click(trace, points, state):
+                st.text_area('opaaaaaaa')
+
+            stacked_bar.data[0].on_click(handle_click)
+            VBox([stacked_bar, out])
+
             fig2 = px.histogram(df_weekly_cases_level_down,
                                 x=df_weekly_cases_level_down['data'],
                                 y=df_weekly_cases_level_down['percentage_deaths'],
@@ -336,7 +383,7 @@ def descriptive_models():
                                 histfunc="avg",
                                 barnorm="percent",
                                 nbins=50)
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(fig2, use_container_width=False)
 
 
 def about():
