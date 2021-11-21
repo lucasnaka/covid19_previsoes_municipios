@@ -17,6 +17,8 @@ from urllib.request import urlopen
 import json
 from ipywidgets import Output, VBox
 
+# specify the primary menu definition
+
 st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
@@ -274,116 +276,137 @@ def descriptive_models():
 
         selected_filters, level, df_filtered_vacina, df_weekly_cases_level_up, df_weekly_cases_level_selected, df_weekly_cases_level_down = common_filters_desc(
             df_vacina, df_weekly_deaths)
-        # if selected_filters:
-        #     st.info(f"{selected_filters}")
 
-        #     st.title('Número de óbitos por dia')
-        with col1:
-            html_card_header1 = """
+        html_card_header1 = """
             <div class="card">
             <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
                 <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Óbitos semanais (última data selecionada):</h3>
             </div>
             </div>
             """
-            st.markdown(html_card_header1, unsafe_allow_html=True)
-            mean_ob = np.mean(df_weekly_cases_level_selected.loc[df_weekly_cases_level_selected['week_number'] ==
-                                                                 df_weekly_cases_level_selected[
-                                                                     'week_number'].max(), "new_deaths_week_division"])
-            figin = go.Figure().add_trace(go.Indicator(
-                mode="number",
-                value=mean_ob,
-                domain={'row': 1, 'column': 0}))
 
-            st.plotly_chart(figin.update_layout(autosize=False,
-                                                width=150, height=90, margin=dict(l=20, r=20, b=20, t=30),
-                                                paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
+        st.markdown(html_card_header1, unsafe_allow_html=True)
+        mean_ob = np.mean(df_weekly_cases_level_selected.loc[df_weekly_cases_level_selected['week_number'] ==
+                                                             df_weekly_cases_level_selected[
+                                                                 'week_number'].max(), "new_deaths_week_division"])
+        figin = go.Figure().add_trace(go.Indicator(
+            mode="number",
+            value=mean_ob,
+            domain={'row': 1, 'column': 0}))
 
-            # fig = make_subplots(1, 1)
-            #
-            # fig.add_trace(
-            #     go.Bar(
-            #         x=df_weekly_cases_level_up['data'],
-            #         y=df_weekly_cases_level_up['new_deaths_week_division'],
-            #         customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
-            #         text=df_weekly_cases_level_up['data'],
-            #         hoverinfo='text',
-            #         hovertemplate='%{customdata}'
-            #     )
-            # )
+        st.plotly_chart(figin.update_layout(autosize=False,
+                                            width=150, height=90, margin=dict(l=10, r=10, b=20, t=30),
+                                            paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
 
-            fig = go.Figure()
-            fig.add_trace(go.Bar(x=df_weekly_cases_level_up['data'],
-                        y=df_weekly_cases_level_up['new_deaths_week_division'],
-                        customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
-                        )
-            )
+        ################################################################################################################
+        # Parte destinada a testar o subplot com eixo x compartilhado
+        ################################################################################################################
+        # fig = make_subplots(1, 1)
+        #
+        # fig.add_trace(
+        #     go.Bar(
+        #         x=df_weekly_cases_level_up['data'],
+        #         y=df_weekly_cases_level_up['new_deaths_week_division'],
+        #         customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
+        #         text=df_weekly_cases_level_up['data'],
+        #         hoverinfo='text',
+        #         hovertemplate='%{customdata}'
+        #     )
+        # )
 
-            fig.add_trace(go.Bar(
-                x=df_weekly_cases_level_selected['data'],
-                y=df_weekly_cases_level_selected['new_deaths_week_division'],
-                customdata=df_weekly_cases_level_selected['noticia'].to_numpy(),
-            )
-            )
+        # Obitos semanais no nivel analisado
+        # Grafico com barplot
+        # fig = go.Figure()
+        # fig.add_trace(go.Bar(x=df_weekly_cases_level_up['data'],
+        #                      y=df_weekly_cases_level_up['new_deaths_week_division'],
+        #                      customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
+        #                      )
+        #               )
+        #
+        # fig.add_trace(go.Bar(
+        #     x=df_weekly_cases_level_selected['data'],
+        #     y=df_weekly_cases_level_selected['new_deaths_week_division'],
+        #     customdata=df_weekly_cases_level_selected['noticia'].to_numpy(),
+        # )
+        # )
 
-            fig.update_traces(
-                hovertemplate="%{customdata}",
-            )
+        # Grafico com histogram
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(
+            x=df_weekly_cases_level_up['data'],
+            y=df_weekly_cases_level_up['new_deaths_week_division'], histfunc="avg", nbinsx=50,
+            customdata=df_weekly_cases_level_up['noticia'].to_numpy()))
+        fig.add_trace(go.Histogram(
+            x=df_weekly_cases_level_selected['data'],
+            y=df_weekly_cases_level_selected['new_deaths_week_division'], histfunc="avg", nbinsx=50,
+            customdata=df_weekly_cases_level_selected['noticia'].to_numpy()))
 
-            fig.update_layout(yaxis_title="Óbitos semanais",
-                              font=dict(
-                                  family="arial",
-                                  size=14),
-                              template="plotly_white",
-                              plot_bgcolor='rgba(0,0,0,0)',
-                              margin=dict(l=20, r=20, b=20, t=30),
-                              width=1050,
-                              height=350,
-                              hoverlabel=dict(
-                                  bgcolor="white",
-                                  font_size=12,
-                                  font_family="Rockwell"
-                              ),
-                              barmode='overlay',
-                              )
-            st.plotly_chart(fig, use_container_width=False)
+        fig.update_traces(
+            opacity=0.55,
+            selector=dict(type="histogram"),
+            hovertemplate="%{customdata}",
+        )
 
-            # Plot stacked bar with percentage of deaths per region per week
-            # stacked_bar = fig.add_bar(x=df_weekly_cases_level_down['data'],
-            #                           y=df_weekly_cases_level_down['percentage_deaths'],
-            #                           name=level,
-            #                                 )
-            data = [go.Bar(name=group,
-                           x=dfg['data'],
-                           y=dfg['percentage_deaths'])
-                           for group, dfg in df_weekly_cases_level_down.groupby(by=level)]
+        fig.update_layout(yaxis_title="Óbitos semanais",
+                          font=dict(
+                              family="arial",
+                              size=14),
+                          template="plotly_white",
+                          plot_bgcolor='rgba(0,0,0,0)',
+                          margin=dict(l=20, r=20, b=20, t=30),
+                          width=1050,
+                          height=350,
+                          # barmode='stack',
+                          hoverlabel=dict(
+                              bgcolor="white",
+                              font_size=14,
+                              font_family="Rockwell"
+                          ),
+                          barmode='overlay',
+                          )
+        st.plotly_chart(fig, use_container_width=False)
 
-            stacked_bar = go.FigureWidget(data=data)
-            stacked_bar.update_layout(barmode='stack')
+        ################################################################################################################
+        # Area destinada ao teste dos clicks
+        ################################################################################################################
+        # Plot stacked bar with percentage of deaths per region per week
+        # stacked_bar = fig.add_bar(x=df_weekly_cases_level_down['data'],
+        #                           y=df_weekly_cases_level_down['percentage_deaths'],
+        #                           name=level,
+        #                                 )
+        data = [go.Bar(name=group,
+                       x=dfg['data'],
+                       y=dfg['percentage_deaths'])
+                for group, dfg in df_weekly_cases_level_down.groupby(by=level)]
 
-            st.plotly_chart(stacked_bar, use_container_width=False)
+        stacked_bar = go.FigureWidget(data=data)
+        stacked_bar.update_layout(barmode='stack')
 
-            out = Output()
+        st.plotly_chart(stacked_bar, use_container_width=False)
 
-            @out.capture(clear_output=False)
-            def handle_click(trace, points, state):
-                st.text_area('opaaaaaaa')
+        out = Output()
 
-            stacked_bar.data[0].on_click(handle_click)
-            VBox([stacked_bar, out])
+        @out.capture(clear_output=False)
+        def handle_click(trace, points, state):
+            st.text_area('opaaaaaaa')
 
-            fig2 = px.histogram(df_weekly_cases_level_down,
-                                x=df_weekly_cases_level_down['data'],
-                                y=df_weekly_cases_level_down['percentage_deaths'],
-                                color=level,
-                                # labels={
-                                #     "regiao": "Região",
-                                # },
-                                barmode="stack",
-                                histfunc="avg",
-                                barnorm="percent",
-                                nbins=50)
-            st.plotly_chart(fig2, use_container_width=False)
+        stacked_bar.data[0].on_click(handle_click)
+        VBox([stacked_bar, out])
+        ################################################################################################################
+
+        # Stacked bar 100% com porcentagem de mortes por subdivisao
+        fig2 = px.histogram(df_weekly_cases_level_down,
+                            x=df_weekly_cases_level_down['data'],
+                            y=df_weekly_cases_level_down['percentage_deaths'],
+                            color=level,
+                            # labels={
+                            #     "regiao": "Região",
+                            # },
+                            barmode="stack",
+                            histfunc="avg",
+                            barnorm="percent",
+                            nbins=50)
+        st.plotly_chart(fig2, use_container_width=False)
 
 
 def about():
