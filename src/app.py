@@ -30,8 +30,6 @@ st.set_page_config(
 
 matplotlib.use("Agg")
 
-st.title("Previsão de Obitos COVID-19 - ICMC/MECAI - USP")
-
 st.sidebar.title('Menu')
 pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
 selected_page = st.sidebar.radio('Paginas', pages)
@@ -120,10 +118,10 @@ def filter_aggregation_level():
 
 
 def filter_state_city():
-    selected_state = st.sidebar.selectbox('Estado', list_states, key="selectbox_state")
+    selected_state = st.selectbox('Estado', list_states, key="selectbox_state")
     list_cities = list(df_depara_levels[df_depara_levels['estado'] == selected_state][
                            'municipio'].drop_duplicates().sort_values())
-    selected_city = st.sidebar.selectbox('Cidade', list_cities, key="selectbox_city")
+    selected_city = st.selectbox('Cidade', list_cities, key="selectbox_city")
 
     return selected_state, selected_city
 
@@ -243,32 +241,48 @@ def home():
 def predictive_models():
     st.title('Modelos preditivos')
 
-    selected_filters, cities_shape_filtered = common_filters_pred(df_clusters,
-                                                                  cities_shape,
-                                                                  df_weekly_deaths)
+    # selected_filters, cities_shape_filtered = common_filters_pred(df_clusters,
+    #                                                               cities_shape,
+    #                                                               df_weekly_deaths)
 
-    fig = px.choropleth_mapbox(
-        df_clusters,  # banco de dados da soja
-        locations="codarea",  # definindo os limites no mapa
-        featureidkey="properties.codarea",
-        geojson=cities_shape_filtered,  # definindo as delimitações geográficas
-        #     color="cluster", # definindo a cor através da base de dados
-        hover_name="Município",  # pontos que você quer mostrar na caixinha de informação
-        hover_data=['Município', 'cluster'],
-        title='Indice de Letalitade por Região',
-        mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
-        zoom=3,  # o tamanho do gráfico
-        opacity=0.5,  # opacidade da cor do map
-        center={"lat": -14, "lon": -55},
-        width=1000, height=900, )
-    fig.update_layout(title="Cidades similares",
-                      title_font_color="black",
-                      font=dict(
-                          family="arial",
-                          size=14),
-                      template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
-                      margin=dict(b=0))
-    st.plotly_chart(fig, use_container_width=True)
+    st.write(
+        """
+    <div class="base-wrapper primary-span">
+        <span class="section-header">Selecione seu estado e município no mapa abaixo:</span>
+    </div>""",
+        unsafe_allow_html=True,
+    )
+
+    col1, col2 = st.beta_columns([0.6, 0.35])
+
+    with col2:
+        selected_filters, cities_shape_filtered = common_filters_pred(df_clusters,
+                                                                      cities_shape,
+                                                                      df_weekly_deaths)
+
+    with col1:
+        fig = px.choropleth_mapbox(
+            df_clusters,  # banco de dados da soja
+            locations="codarea",  # definindo os limites no mapa
+            featureidkey="properties.codarea",
+            geojson=cities_shape_filtered,  # definindo as delimitações geográficas
+            #     color="cluster", # definindo a cor através da base de dados
+            hover_name="Município",  # pontos que você quer mostrar na caixinha de informação
+            hover_data=['Município', 'cluster'],
+            title='Indice de Letalitade por Região',
+            mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
+            zoom=3,  # o tamanho do gráfico
+            opacity=0.5,  # opacidade da cor do map
+            center={"lat": -14, "lon": -55},
+            width=1000, height=900, )
+        fig.update_layout(title="Cidades similares",
+                          title_font_color="black",
+                          font=dict(
+                              family="arial",
+                              size=14),
+                          template="plotly_white", plot_bgcolor='rgba(0,0,0,0)',
+                          margin=dict(b=0))
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def descriptive_models():
@@ -301,46 +315,7 @@ def descriptive_models():
                                             width=150, height=90, margin=dict(l=10, r=10, b=20, t=30),
                                             paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
 
-        st.write(
-            """
-        <div class="base-wrapper primary-span">
-            <span class="section-header">Selecione seu estado ou município no mapa abaixo:</span>
-        </div>""",
-            unsafe_allow_html=True,
-        )
-
         ################################################################################################################
-        # Parte destinada a testar o subplot com eixo x compartilhado
-        ################################################################################################################
-        # fig = make_subplots(1, 1)
-        #
-        # fig.add_trace(
-        #     go.Bar(
-        #         x=df_weekly_cases_level_up['data'],
-        #         y=df_weekly_cases_level_up['new_deaths_week_division'],
-        #         customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
-        #         text=df_weekly_cases_level_up['data'],
-        #         hoverinfo='text',
-        #         hovertemplate='%{customdata}'
-        #     )
-        # )
-
-        # Obitos semanais no nivel analisado
-        # Grafico com barplot
-        # fig = go.Figure()
-        # fig.add_trace(go.Bar(x=df_weekly_cases_level_up['data'],
-        #                      y=df_weekly_cases_level_up['new_deaths_week_division'],
-        #                      customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
-        #                      )
-        #               )
-        #
-        # fig.add_trace(go.Bar(
-        #     x=df_weekly_cases_level_selected['data'],
-        #     y=df_weekly_cases_level_selected['new_deaths_week_division'],
-        #     customdata=df_weekly_cases_level_selected['noticia'].to_numpy(),
-        # )
-        # )
-
         # Grafico com histogram
         fig = go.Figure()
         fig.add_trace(go.Histogram(
@@ -377,34 +352,6 @@ def descriptive_models():
                           )
         st.plotly_chart(fig, use_container_width=False)
 
-        ################################################################################################################
-        # Area destinada ao teste dos clicks
-        ################################################################################################################
-        # Plot stacked bar with percentage of deaths per region per week
-        # stacked_bar = fig.add_bar(x=df_weekly_cases_level_down['data'],
-        #                           y=df_weekly_cases_level_down['percentage_deaths'],
-        #                           name=level,
-        #                                 )
-        data = [go.Bar(name=group,
-                       x=dfg['data'],
-                       y=dfg['percentage_deaths'])
-                for group, dfg in df_weekly_cases_level_down.groupby(by=level)]
-
-        stacked_bar = go.FigureWidget(data=data)
-        stacked_bar.update_layout(barmode='stack')
-
-        st.plotly_chart(stacked_bar, use_container_width=False)
-
-        out = Output()
-
-        @out.capture(clear_output=False)
-        def handle_click(trace, points, state):
-            st.text_area('opaaaaaaa')
-
-        stacked_bar.data[0].on_click(handle_click)
-        VBox([stacked_bar, out])
-        ################################################################################################################
-
         # Stacked bar 100% com porcentagem de mortes por subdivisao
         fig2 = px.histogram(df_weekly_cases_level_down,
                             x=df_weekly_cases_level_down['data'],
@@ -417,8 +364,102 @@ def descriptive_models():
                             histfunc="avg",
                             barnorm="percent",
                             nbins=50)
+
         st.plotly_chart(fig2, use_container_width=False)
 
+
+
+        ################################################################################################################
+        # Area destinada ao teste dos clicks
+        ################################################################################################################
+        # Plot stacked bar with percentage of deaths per region per week
+        # stacked_bar = fig.add_bar(x=df_weekly_cases_level_down['data'],
+        #                           y=df_weekly_cases_level_down['percentage_deaths'],
+        #                           name=level,
+        #                                 )
+
+        trace1 = go.Histogram(
+            x=df_weekly_cases_level_up['data'],
+            y=df_weekly_cases_level_up['new_deaths_week_division'],
+            customdata=df_weekly_cases_level_up['noticia'].to_numpy()
+        )
+        trace2 = go.Histogram(
+            x=df_weekly_cases_level_selected['data'],
+            y=df_weekly_cases_level_selected['new_deaths_week_division'],
+            customdata=df_weekly_cases_level_selected['noticia'].to_numpy()
+        )
+
+        widths = np.array([1] * 80)
+
+        # data = [go.Bar(name=group,  # Graph Objects
+        #                x=dfg['week_number'],
+        #                y=dfg['percentage_deaths'],
+        #                width=widths,
+        #                offset=0)
+        #         for group, dfg in df_weekly_cases_level_down.groupby(by=level)]
+
+
+        # stacked_bar = go.FigureWidget(data=data)
+        # fig.update_layout(barmode='stack')  # Express
+
+        fig = make_subplots(rows=2, cols=1, specs=[[{}], [{}]],
+                            shared_xaxes=True, shared_yaxes=False,
+                            vertical_spacing=0.05)
+
+        fig.append_trace(trace1, 1, 1)
+        fig.append_trace(trace2, 1, 1)
+        for group, dfg in df_weekly_cases_level_down.groupby(by=level):
+            trace_bar = go.Bar(name=group,  # Graph Objects
+                       x=dfg['week_number'],
+                       y=dfg['percentage_deaths'],
+                       width=widths,
+                       offset=0)
+
+            fig.append_trace(trace_bar, 2, 1)
+
+        fig.update_xaxes(
+            tickvals=np.cumsum(widths) - widths / 2,
+            # ticktext=["%s<br>%d" % (l, w) for l, w in zip(labels, widths)]
+        )
+
+
+        fig.update_traces(
+            histfunc="avg",
+            nbinsx=df_weekly_cases_level_up['data'].nunique(),
+            opacity=0.55,
+            selector=dict(type="histogram"),
+            hovertemplate="%{customdata}",
+            row=1
+        )
+
+        fig.update_layout(yaxis_title="Óbitos semanais",
+                          font=dict(
+                              family="arial",
+                              size=14),
+                          template="plotly_white",
+                          plot_bgcolor='rgba(0,0,0,0)',
+                          margin=dict(l=20, r=20, b=20, t=30),
+                          width=1050,
+                          height=350,
+                          hoverlabel=dict(
+                              bgcolor="white",
+                              font_size=14,
+                              font_family="Rockwell"
+                          ),
+                          barmode='stack',
+                          )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # out = Output()
+        #
+        # @out.capture(clear_output=False)
+        # def handle_click(trace, points, state):
+        #     st.text_area('opaaaaaaa')
+        #
+        # stacked_bar.data[0].on_click(handle_click)
+        # VBox([stacked_bar, out])
+        ################################################################################################################
 
 def about():
     st.title('Sobre')
@@ -450,7 +491,15 @@ def about():
     #### MECAI - 2021
     """)
 
+
 utils.localCSS("style.css")
+st.write(f"""<div>
+            <div class="base-wrapper flex flex-column" style="background-color:#0277bd">
+                <div class="white-span header p1" style="font-size:30px;">Acompanhamento Covid-19 - ICMC/MECAI - USP</div>
+        </div>""",
+         unsafe_allow_html=True,
+         )
+
 if selected_page == 'Início':
     about()
 elif selected_page == 'Modelos preditivos':
