@@ -2,14 +2,10 @@
 # coding: utf-8
 
 import streamlit as st
-from PIL import Image
-
-import matplotlib.pyplot as plt
 import matplotlib
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import seaborn as sns
 import pandas as pd
 import numpy as np
 import datetime as dt
@@ -17,12 +13,21 @@ from urllib.request import urlopen
 import json
 from ipywidgets import Output, VBox
 from st_btn_select import st_btn_select
+from itertools import cycle
 
 # Local files
 import utils
 
-
 # specify the primary menu definition
+# palette = cycle(px.colors.sequential.PuBu)
+# palette = cycle(['#e1f5fe', '#01579b',
+#                  '#0277bd', '#b3e5fc',
+#                  '#0288d1', '#80d8ff',
+#                  '#0091ea', '#81d4fa',
+#                  '#039be5', '#4fc3f7',
+#                  '#00b0ff', '#40c4ff',
+#                  '#03a9f4', '#29b6f6',
+#                  ])
 
 st.set_page_config(
     layout="wide",
@@ -32,44 +37,46 @@ st.set_page_config(
 
 matplotlib.use("Agg")
 
-st.title("Previsão de Obitos COVID-19 - ICMC/MECAI - USP")
-
-
 st.sidebar.title('Menu')
-#pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
-#selected_page = st.sidebar.radio('Paginas', pages)
+# pages = ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre')
+# selected_page = st.sidebar.radio('Paginas', pages)
 page = st_btn_select(
-  # The different pages
-  ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre'),
-  # Enable navbar
-  nav=True,
-  # You can pass a formatting function. Here we capitalize the options
-  format_func=lambda name: name.capitalize(),
+    # The different pages
+    ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre'),
+    # Enable navbar
+    nav=True,
+    # You can pass a formatting function. Here we capitalize the options
+    format_func=lambda name: name.capitalize(),
 )
-
-
 
 
 # suppress_st_warning=True para usar depois e "desaparecer" as mensagens de carregamento
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_grouped.parquet')
-    df_depara_levels = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/depara_levels.parquet')
-    df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
-    json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
+    # df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_grouped.parquet')
+    # df_depara_levels = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/depara_levels.parquet')
+    # df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
+    # df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
+    # json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
+    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
+    df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
+    df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
+    df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
+    json_file = open('../data/app/cities_shape.json')
 
     df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
     df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
+    df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
     list_regions = list(df_depara_levels['regiao'].drop_duplicates().sort_values())
     list_states = list(df_depara_levels['estado'].drop_duplicates().sort_values())
     json_cities_shape = json.load(json_file)
     return list_regions, list_states, df_depara_levels, df_vaccine, df_regional_clusters, \
-           json_cities_shape, df_weekly_deaths
+           json_cities_shape, df_weekly_deaths, df_death_predictions
 
 
-list_regions, list_states, df_depara_levels, df_vacina, df_clusters, cities_shape, df_weekly_deaths = load_data()
+list_regions, list_states, df_depara_levels, df_vacina, df_clusters, cities_shape, df_weekly_deaths, df_death_predictions = load_data()
 
 
 @st.cache(allow_output_mutation=True)
@@ -171,9 +178,9 @@ def common_filters_pred(df_clusters, cities_shape, df_weekly_cases):
     return selected_filters, cities_shape_filtered
 
 
-def common_filters_desc(df_vacina, df_weekly_cases):
+def common_filters_desc(df_vacina, df_weekly_cases, df_death_predictions):
     selected_filters = dict()
-    selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
+    # selected_data = st.sidebar.selectbox('Dados disponíveis', ('Casos Confirmados', 'Óbitos', 'Vacinação'))
     selected_reg, selected_state, selected_regsaude, selected_city = filter_aggregation_level()
 
     if selected_reg:
@@ -181,7 +188,8 @@ def common_filters_desc(df_vacina, df_weekly_cases):
             if selected_regsaude:
                 if selected_city:
                     df_weekly_cases_level_up = df_weekly_cases.loc[
-                        df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
+                        (df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude) & (
+                            df_weekly_cases['municipio'].isna())]
                     df_weekly_cases_level_selected = df_weekly_cases.loc[
                         (df_weekly_cases['municipio'] == selected_city)]
                     cities_at_this_level = df_depara_levels.loc[
@@ -189,48 +197,59 @@ def common_filters_desc(df_vacina, df_weekly_cases):
                     df_weekly_cases_level_down = df_weekly_cases.loc[
                         (df_weekly_cases['municipio'].isin(cities_at_this_level)) & (
                             df_weekly_cases['municipio'].notna())]
+                    df_death_filtered = df_death_predictions.loc[df_death_predictions['municipio'] == selected_city]
                     level = 'municipio'
                 else:
-                    df_weekly_cases_level_up = df_weekly_cases.loc[df_weekly_cases['estado'] == selected_state]
+                    df_weekly_cases_level_up = df_weekly_cases.loc[
+                        (df_weekly_cases['estado'] == selected_state) & (df_weekly_cases['nomeRegiaoSaude'].isna())]
                     df_weekly_cases_level_selected = df_weekly_cases.loc[
-                        df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude]
+                        (df_weekly_cases['nomeRegiaoSaude'] == selected_regsaude) & (
+                            df_weekly_cases['municipio'].isna())]
                     cities_at_this_level = df_depara_levels.loc[
                         df_depara_levels['nomeRegiaoSaude'] == selected_regsaude, 'municipio'].unique()
                     df_weekly_cases_level_down = df_weekly_cases.loc[
                         (df_weekly_cases['municipio'].isin(cities_at_this_level)) & (
                             df_weekly_cases['municipio'].notna())]
+                    df_death_filtered = pd.DataFrame()
                     level = 'municipio'
             else:
-                df_weekly_cases_level_up = df_weekly_cases.loc[df_weekly_cases['regiao'] == selected_reg]
-                df_weekly_cases_level_selected = df_weekly_cases.loc[(df_weekly_cases['estado'] == selected_state)]
+                df_weekly_cases_level_up = df_weekly_cases.loc[
+                    (df_weekly_cases['regiao'] == selected_reg) & (df_weekly_cases['estado'].isna())]
+                df_weekly_cases_level_selected = df_weekly_cases.loc[
+                    (df_weekly_cases['estado'] == selected_state) & (df_weekly_cases['nomeRegiaoSaude'].isna())]
                 regsaude_at_this_level = df_depara_levels.loc[
                     df_depara_levels['estado'] == selected_state, 'nomeRegiaoSaude'].unique()
                 df_weekly_cases_level_down = df_weekly_cases.loc[
                     (df_weekly_cases['nomeRegiaoSaude'].isin(regsaude_at_this_level)) & (
-                        df_weekly_cases['nomeRegiaoSaude'].notna())]
+                        df_weekly_cases['nomeRegiaoSaude'].notna()) & (
+                        df_weekly_cases['municipio'].isna())]
+                df_death_filtered = pd.DataFrame()
                 level = 'nomeRegiaoSaude'
         else:
             df_weekly_cases_level_up = df_weekly_cases.loc[
                 (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
                     df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
-            df_weekly_cases_level_selected = df_weekly_cases.loc[(df_weekly_cases['regiao'] == selected_reg)]
+            df_weekly_cases_level_selected = df_weekly_cases.loc[
+                (df_weekly_cases['regiao'] == selected_reg) & (df_weekly_cases['estado'].isna())]
             states_at_this_level = df_depara_levels.loc[df_depara_levels['regiao'] == selected_reg, 'estado'].unique()
             df_weekly_cases_level_down = df_weekly_cases.loc[
-                (df_weekly_cases['estado'].isin(states_at_this_level)) & (df_weekly_cases['estado'].notna())]
+                (df_weekly_cases['estado'].isin(states_at_this_level)) & (df_weekly_cases['estado'].notna()) & (
+                    df_weekly_cases['codRegiaoSaude'].isna())]
+            df_death_filtered = pd.DataFrame()
             level = 'estado'
     else:
         df_weekly_cases_level_up = df_weekly_cases.loc[
             (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
                 df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
-        df_weekly_cases_level_selected = df_weekly_cases.loc[
-            (df_weekly_cases['regiao'].isna()) & (df_weekly_cases['estado'].isna()) & (
-                df_weekly_cases['codmun'].isna()) & (df_weekly_cases['codRegiaoSaude'].isna())]
-        df_weekly_cases_level_down = df_weekly_cases.loc[(df_weekly_cases['regiao'].notna())]
+        df_weekly_cases_level_selected = pd.DataFrame()
+        df_weekly_cases_level_down = df_weekly_cases.loc[
+            (df_weekly_cases['regiao'].notna()) & (df_weekly_cases['estado'].isna())]
+        df_death_filtered = pd.DataFrame()
         level = 'regiao'
 
-    selected_date_range = filter_date(df_weekly_cases_level_selected)
+    selected_date_range = filter_date(df_weekly_cases_level_up)
 
-    selected_filters['database'] = selected_data
+    # selected_filters['database'] = selected_data
     selected_filters['date'] = selected_date_range
 
     if selected_filters['date']:
@@ -239,14 +258,19 @@ def common_filters_desc(df_vacina, df_weekly_cases):
         df_weekly_cases_level_up = df_weekly_cases_level_up.loc[
             (df_weekly_cases_level_up['data'].dt.date >= selected_filters['date'][0])
             & (df_weekly_cases_level_up['data'].dt.date <= selected_filters['date'][1])]
-        df_weekly_cases_level_selected = df_weekly_cases_level_selected.loc[
-            (df_weekly_cases_level_selected['data'].dt.date >= selected_filters['date'][0])
-            & (df_weekly_cases_level_selected['data'].dt.date <= selected_filters['date'][1])]
+        if not df_weekly_cases_level_selected.empty:
+            df_weekly_cases_level_selected = df_weekly_cases_level_selected.loc[
+                (df_weekly_cases_level_selected['data'].dt.date >= selected_filters['date'][0])
+                & (df_weekly_cases_level_selected['data'].dt.date <= selected_filters['date'][1])]
+        if not df_death_filtered.empty:
+            df_death_filtered = df_death_filtered.loc[
+                (df_death_filtered['data'].dt.date >= selected_filters['date'][0])
+                & (df_death_filtered['data'].dt.date <= selected_filters['date'][1])]
         df_weekly_cases_level_down = df_weekly_cases_level_down.loc[
             (df_weekly_cases_level_down['data'].dt.date >= selected_filters['date'][0])
             & (df_weekly_cases_level_down['data'].dt.date <= selected_filters['date'][1])]
 
-    return selected_filters, level, df_vacina, df_weekly_cases_level_up, df_weekly_cases_level_selected, df_weekly_cases_level_down
+    return selected_filters, level, df_vacina, df_weekly_cases_level_up, df_weekly_cases_level_selected, df_weekly_cases_level_down, df_death_filtered
 
 
 def home():
@@ -254,8 +278,6 @@ def home():
 
 
 def predictive_models():
-    st.title('Modelos preditivos')
-
     selected_filters, cities_shape_filtered = common_filters_pred(df_clusters,
                                                                   cities_shape,
                                                                   df_weekly_deaths)
@@ -285,90 +307,143 @@ def predictive_models():
 
 
 def descriptive_models():
-    st.header('Modelos descritivos')
+    st.write(
+        """
+    <div class="base-wrapper primary-span">
+        <span class="section-header">Acompanhamento de óbitos semanais</span>
+    </div>
+    <div class="base-wrapper">
+        <span>
+            A partir dos gráficos abaixo, podemos acompanhar a evolução da pandemia tanto na perspectiva temporal quanto
+            geográfica. No primeiro gráfico, é possível acompanhar em números absolutos a quantidade de óbitos semanais 
+            pela Covid-19. No segundo gráfico, é possível acompanhar como o número de óbitos em cada semana era distribuído
+            no nível mais granular ao selecionado.
+            <br>
+            Ao passar o ponteiro do mouse pelas barras, algumas notícias sobre a Covid-19 aparecem, assim conseguimos acompanhar
+            as medidas governamentais que foram tomadas ao longo da pandemia. 
+        </span>
+    </div>""",
+        unsafe_allow_html=True,
+    )
+    with st.container():
+        col1, col2 = st.columns(2)
 
-    with st.beta_container():
-        col1, col2 = st.beta_columns(2)
+        selected_filters, level, df_filtered_vacina, df_weekly_cases_level_up, df_weekly_cases_level_selected, \
+        df_weekly_cases_level_down, df_predictions_filtered = common_filters_desc(df_vacina, df_weekly_deaths,
+                                                                                  df_death_predictions)
 
-        selected_filters, level, df_filtered_vacina, df_weekly_cases_level_up, df_weekly_cases_level_selected, df_weekly_cases_level_down = common_filters_desc(
-            df_vacina, df_weekly_deaths)
+        fig = make_subplots(rows=2, cols=1, specs=[[{}], [{}]],
+                            shared_xaxes=True, shared_yaxes=False,
+                            vertical_spacing=0.05)
 
-        html_card_header1 = """
-            <div class="card">
-            <div class="card-body" style="border-radius: 10px 10px 0px 0px; background: #eef9ea; padding-top: 5px; width: 100%; height: 100%;">
-                <h3 class="card-title" style="background-color:#eef9ea; color:#008080; font-family:Georgia; text-align: center; padding: 0px 0;">Óbitos semanais (última data selecionada):</h3>
-            </div>
-            </div>
-            """
+        widths = np.array([1] * df_weekly_cases_level_up['week_number'].nunique())  # Vetor de tamanho das barras
 
-        st.markdown(html_card_header1, unsafe_allow_html=True)
-        mean_ob = np.mean(df_weekly_cases_level_selected.loc[df_weekly_cases_level_selected['week_number'] ==
-                                                             df_weekly_cases_level_selected[
-                                                                 'week_number'].max(), "new_deaths_week_division"])
-        figin = go.Figure().add_trace(go.Indicator(
-            mode="number",
-            value=mean_ob,
-            domain={'row': 1, 'column': 0}))
+        ################################################################################################################
+        ###########################################     Gráfico de cima     ############################################
+        ################################################################################################################
+        # Plotar óbitos semanais para o nível selecionado
+        if not df_weekly_cases_level_selected.empty:
+            df_weekly_cases_level_selected.loc[df_weekly_cases_level_selected['noticia'].isna(), 'noticia'] = ''
+            trace1 = go.Bar(
+                x=df_weekly_cases_level_selected['week_number'],
+                y=df_weekly_cases_level_selected['new_deaths_week_division'],
+                customdata=df_weekly_cases_level_selected['noticia'].to_numpy(),
+                width=widths,
+                offset=0,
+                showlegend=False,
+                # marker_color=next(palette),
+            )
+            fig.append_trace(trace1, 1, 1)
 
-        st.plotly_chart(figin.update_layout(autosize=False,
-                                            width=150, height=90, margin=dict(l=10, r=10, b=20, t=30),
-                                            paper_bgcolor="#fbfff0", font={'size': 20}), use_container_width=True)
+            # Como o gráfico é um stacked bar, para corrigir a quantidade de óbitos devemos fazer a diferença entre os
+            # óbitos no nível acima do selecionado e o nível selecionado
+            df_weekly_cases_level_up_fixed = df_weekly_cases_level_up.merge(df_weekly_cases_level_selected, how='left',
+                                                                            on=['week_number', 'noticia'])
+            df_weekly_cases_level_up_fixed['new_deaths_week_division'] = df_weekly_cases_level_up_fixed[
+                                                                             'new_deaths_week_division_x'] - \
+                                                                         df_weekly_cases_level_up_fixed[
+                                                                             'new_deaths_week_division_y']
+        else: # Caso o usuário ainda não tenha selecionado nenhum nível, apenas copiamos os dados a nível Brasil para
+              # serem plotados
+            df_weekly_cases_level_up_fixed = df_weekly_cases_level_up.copy()
 
-        st.write(
-            """
-        <div class="base-wrapper primary-span">
-            <span class="section-header">Selecione seu estado ou município no mapa abaixo:</span>
-        </div>""",
-            unsafe_allow_html=True,
+        # Plotar óbitos semanais para acima ao nível selecionado
+        trace2 = go.Bar(
+            x=df_weekly_cases_level_up_fixed['week_number'],
+            y=df_weekly_cases_level_up_fixed['new_deaths_week_division'],
+            customdata=df_weekly_cases_level_up_fixed['noticia'].to_numpy(),
+            width=widths,
+            offset=0,
+            showlegend=False,
+            # marker_color=next(palette),
+        )
+        fig.append_trace(trace2, 1, 1)
+
+        # Plotar as predições de óbitos diária
+        if not df_predictions_filtered.empty: # Plotar apenas se o usuário chegou a selecionar algum município
+            trace3 = go.Scatter(
+                x=df_predictions_filtered['week_number_day'],
+                y=df_predictions_filtered['obitosPreditos'],
+                line=dict(color='rgb(0,100,80)'),
+                mode='lines',
+                customdata=df_predictions_filtered['obitosPreditos'],
+                showlegend=False
+            )
+            trace4 = go.Scatter(
+                name='Upper Bound',
+                x=df_predictions_filtered['week_number_day'],
+                y=df_predictions_filtered['upper'],
+                line=dict(width=0),
+                mode='lines',
+                customdata=df_predictions_filtered['upper'],
+                marker=dict(color="#444"),
+                showlegend=False
+            )
+            trace5 = go.Scatter(
+                name='Lower Bound',
+                x=df_predictions_filtered['week_number_day'],
+                y=df_predictions_filtered['lower'],
+                line=dict(width=0),
+                mode='lines',
+                customdata=df_predictions_filtered['lower'],
+                marker=dict(color="#444"),
+                showlegend=False,
+                fillcolor='rgba(68, 68, 68, 0.3)',
+                fill='tonexty',
+            )
+            fig.append_trace(trace3, 1, 1)
+            fig.append_trace(trace4, 1, 1)
+            fig.append_trace(trace5, 1, 1)
+
+        ################################################################################################################
+        ###########################################     Gráfico de baixo     ###########################################
+        ################################################################################################################
+        widths = np.array([1] * df_weekly_cases_level_down['week_number'].nunique())  # Vetor de tamanho das barras
+
+        # Plotar porcentagem de óbitos grupo a grupo em um stacked bar chart
+        for group, dfg in df_weekly_cases_level_down.groupby(by=level):
+            trace_bar = go.Bar(name=group,
+                               x=dfg['week_number'],
+                               y=dfg['percentage_deaths'],
+                               width=widths,
+                               offset=0,
+                               # marker_color=next(palette),
+                        )
+
+            fig.append_trace(trace_bar, 2, 1)
+
+        ################################################################################################################
+        ######################################     Ajustar layout das figuras     ######################################
+        ################################################################################################################
+        fig.update_traces(
+            hovertemplate="%{customdata}<extra></extra>",
+            row=1
         )
 
-        ################################################################################################################
-        # Parte destinada a testar o subplot com eixo x compartilhado
-        ################################################################################################################
-        # fig = make_subplots(1, 1)
-        #
-        # fig.add_trace(
-        #     go.Bar(
-        #         x=df_weekly_cases_level_up['data'],
-        #         y=df_weekly_cases_level_up['new_deaths_week_division'],
-        #         customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
-        #         text=df_weekly_cases_level_up['data'],
-        #         hoverinfo='text',
-        #         hovertemplate='%{customdata}'
-        #     )
-        # )
-
-        # Obitos semanais no nivel analisado
-        # Grafico com barplot
-        # fig = go.Figure()
-        # fig.add_trace(go.Bar(x=df_weekly_cases_level_up['data'],
-        #                      y=df_weekly_cases_level_up['new_deaths_week_division'],
-        #                      customdata=df_weekly_cases_level_up['noticia'].to_numpy(),
-        #                      )
-        #               )
-        #
-        # fig.add_trace(go.Bar(
-        #     x=df_weekly_cases_level_selected['data'],
-        #     y=df_weekly_cases_level_selected['new_deaths_week_division'],
-        #     customdata=df_weekly_cases_level_selected['noticia'].to_numpy(),
-        # )
-        # )
-
-        # Grafico com histogram
-        fig = go.Figure()
-        fig.add_trace(go.Histogram(
-            x=df_weekly_cases_level_up['data'],
-            y=df_weekly_cases_level_up['new_deaths_week_division'], histfunc="avg", nbinsx=50,
-            customdata=df_weekly_cases_level_up['noticia'].to_numpy()))
-        fig.add_trace(go.Histogram(
-            x=df_weekly_cases_level_selected['data'],
-            y=df_weekly_cases_level_selected['new_deaths_week_division'], histfunc="avg", nbinsx=50,
-            customdata=df_weekly_cases_level_selected['noticia'].to_numpy()))
-
-        fig.update_traces(
-            opacity=0.55,
-            selector=dict(type="histogram"),
-            hovertemplate="%{customdata}",
+        fig.update_xaxes(
+            tickvals=np.cumsum(widths) - widths / 2,
+            # ticktext=["%s<br>%d" % (l, w) for l, w in zip(labels, widths)]
+            ticktext=[pd.to_datetime(d).strftime('%d/%m/%y') for d in df_weekly_cases_level_up['data'].unique()],
         )
 
         fig.update_layout(yaxis_title="Óbitos semanais",
@@ -379,92 +454,138 @@ def descriptive_models():
                           plot_bgcolor='rgba(0,0,0,0)',
                           margin=dict(l=20, r=20, b=20, t=30),
                           width=1050,
-                          height=350,
-                          # barmode='stack',
+                          height=650,
                           hoverlabel=dict(
                               bgcolor="white",
                               font_size=14,
                               font_family="Rockwell"
                           ),
-                          barmode='overlay',
+                          xaxis_tickformat='%d %B (%a)<br>%Y',
+                          barmode='stack',
                           )
-        st.plotly_chart(fig, use_container_width=False)
+
+        st.plotly_chart(fig, use_container_width=True)
 
         ################################################################################################################
-        # Area destinada ao teste dos clicks
+        # Área destinada ao teste de clicks
         ################################################################################################################
-        # Plot stacked bar with percentage of deaths per region per week
-        # stacked_bar = fig.add_bar(x=df_weekly_cases_level_down['data'],
-        #                           y=df_weekly_cases_level_down['percentage_deaths'],
-        #                           name=level,
-        #                                 )
-        data = [go.Bar(name=group,
-                       x=dfg['data'],
-                       y=dfg['percentage_deaths'])
-                for group, dfg in df_weekly_cases_level_down.groupby(by=level)]
-
-        stacked_bar = go.FigureWidget(data=data)
-        stacked_bar.update_layout(barmode='stack')
-
-        st.plotly_chart(stacked_bar, use_container_width=False)
-
-        out = Output()
-
-        @out.capture(clear_output=False)
-        def handle_click(trace, points, state):
-            st.text_area('opaaaaaaa')
-
-        stacked_bar.data[0].on_click(handle_click)
-        VBox([stacked_bar, out])
+        # out = Output()
+        #
+        # @out.capture(clear_output=False)
+        # def handle_click(trace, points, state):
+        #     st.text_area('opaaaaaaa')
+        #
+        # stacked_bar.data[0].on_click(handle_click)
+        # VBox([stacked_bar, out])
         ################################################################################################################
-
-        # Stacked bar 100% com porcentagem de mortes por subdivisao
-        fig2 = px.histogram(df_weekly_cases_level_down,
-                            x=df_weekly_cases_level_down['data'],
-                            y=df_weekly_cases_level_down['percentage_deaths'],
-                            color=level,
-                            # labels={
-                            #     "regiao": "Região",
-                            # },
-                            barmode="stack",
-                            histfunc="avg",
-                            barnorm="percent",
-                            nbins=50)
-        st.plotly_chart(fig2, use_container_width=False)
 
 
 def about():
-    st.title('Sobre')
+    st.write(
+        """
+    <div class="base-wrapper primary-span">
+        <span class="section-header">O Projeto</span>
+    </div>
+    <div class="base-wrapper">
+        <span>
+            Plataforma Web para disponibilizar publicamente a previsão de casos 
+            de óbito e vacinação relacionados à Covid-19 em nível municipal.
+        </span>
+    </div>""",
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("""
+    st.write(
+        """
+    <div class="base-wrapper primary-span">
+        <span class="section-header">A Gerência</span>
+    </div>""",
+        unsafe_allow_html=True,
+    )
 
-    ### O Projeto
-    Plataforma Web para disponibilizar publicamente a previsão de casos 
-    de óbito e vacinação relacionados à Covid-19 em nível municipal.
+    st.write(
+        """
+    <div class="base-wrapper">
+        <div style="font-size: 12px">
+        </div>
+        <div>
+            <table class="info-table">
+            <tbody>
+                <tr>
+                    <td class="grey-bg"><strong>Membro</strong></td>
+                    <td class="grey-bg"><strong>Função</strong></td>
+                </tr>
+                <tr>
+                    <td><span>Francisco Louzada Neto</span></td>
+                    <td><span>CEO</span></td>
+                </tr>
+                <tr>
+                    <td><span>Loriz Sallum </span></td>
+                    <td><span>Diretora</span></td>
+                </tr>
+                <tr>
+                    <td><span>Oilson Gonzatto</span></td>
+                    <td><span>Diretor</span></td>
+                </tr>
+            </tbody>
+            </table>
+        </div>
+    </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    ### A Gerência
-    | Membro | Função |
-    | ------ | ------ |
-    | Francisco Louzada Neto | CEO |
-    | Loriz Sallum | Diretora |
-    | Oilson Gonzatto | Diretor |
+    st.write(
+        """
+    <div class="base-wrapper primary-span">
+        <span class="section-header">Os membros da equipe</span>
+    </div>""",
+        unsafe_allow_html=True,
+    )
 
-    ### Os membros da equipe
-    | Aluno | Função |
-    | ------ | ------ |
-    | Bernardo | Estatístico |
-    | Bruno Braziel | Programador |
-    | Francisco Pigato | Coordenador |
-    | Lucas Nakadaira | Programador |
-    | Mariana Spanol | Estatística |
-    
+    st.write(
+        """
+        <div class="base-wrapper">
+            <div style="font-size: 12px">
+            </div>
+            <div>
+                <table class="info-table">
+                <tbody>
+                    <tr>
+                        <td class="grey-bg"><strong>Aluno</strong></td>
+                        <td class="grey-bg"><strong>Função</strong></td>
+                    </tr>
+                    <tr>
+                        <td><span>Bernardo</span></td>
+                        <td><span>Estatístico</span></td>
+                    </tr>
+                    <tr>
+                        <td><span>Bruno Braziel </span></td>
+                        <td><span>Programador</span></td>
+                    </tr>
+                    <tr>
+                        <td><span>Francisco Pigato</span></td>
+                        <td><span>Coordenador</span></td>
+                    </tr>
+                    <tr>
+                        <td><span>Lucas Nakadaira</span></td>
+                        <td><span>Programador</span></td>
+                    </tr>
+                    <tr>
+                        <td><span>Mariana Spanol</span></td>
+                        <td><span>Estatística</span></td>
+                    </tr>
+                </tbody>
+                </table>
+            </div>
+        </div>
+            """,
+        unsafe_allow_html=True,
+    )
 
-    #### PROBABILIDADE E ESTATÍSTICA 
-    #### MECAI - 2021
-    """)
 
-
-utils.localCSS(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\src\style.css")
+# utils.localCSS(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\src\style.css")
+utils.localCSS("style.css")
 st.write(f"""<div>
             <div class="base-wrapper flex flex-column" style="background-color:#0277bd">
                 <div class="white-span header p1" style="font-size:30px;">Acompanhamento Covid-19 - ICMC/MECAI - USP</div>
