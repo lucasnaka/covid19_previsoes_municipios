@@ -3,7 +3,7 @@
 
 :root {
     --main-header-font-family: 'Oswald', sans-serif;
-    --main-primary: #0097A7;
+    --main-primary: #0277bd;
     --main-dark: #3E758A;
     --main-light: #02CEE3;
     --main-yellow: #F2C94C;
@@ -380,7 +380,9 @@ header>.toolbar { /* Hide toolbar menu */
 }  */
 /* Base components */
 .base-wrapper {
-    padding: 3rem;
+    padding-left: 3rem;
+    padding-top: 1.5rem;
+    padding-down: 1.5rem;
     box-sizing: border-box;
 }
 
@@ -1252,7 +1254,7 @@ header>.toolbar { /* Hide toolbar menu */
   }
 
 .info-table{
-    width: 90%;
+    width: auto;
     height: auto;
     /* margin-left: 1rem; */
 }
