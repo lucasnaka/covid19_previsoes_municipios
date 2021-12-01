@@ -42,7 +42,7 @@ st.sidebar.title('Menu')
 # selected_page = st.sidebar.radio('Paginas', pages)
 page = st_btn_select(
     # The different pages
-    ('Início', 'Modelos preditivos', 'Modelos descritivos', 'Sobre'),
+    ('Início', 'Modelos descritivos','Modelos preditivos', 'Sobre'),
     # Enable navbar
     nav=True,
     # You can pass a formatting function. Here we capitalize the options
@@ -417,7 +417,7 @@ def predictive_models():
                                                         df_clusters,
                                                         cities_shape,
                                                         df_predictions_waves)
-
+    st.write(selected_filters)
     selected_models = filter_models()
 
     with st.container():
@@ -620,9 +620,15 @@ def descriptive_models():
             width=widths,
             offset=0,
             showlegend=False,
-            # marker_color=next(palette),
-        )
+            # marker_color=next(palette),    
+            marker=dict(
+                color='rgba(219, 64, 82, 0.7)',
+                line=dict(
+                    color='rgba(219, 64, 82, 1.0)',
+                    width=2)
+        ))
         fig.append_trace(trace2, 1, 1)
+        
 
         # Plotar as predições de óbitos diária
         if not df_predictions_filtered.empty:  # Plotar apenas se o usuário chegou a selecionar algum município
@@ -682,14 +688,16 @@ def descriptive_models():
         ################################################################################################################
         fig.update_traces(
             hovertemplate="%{customdata}<extra></extra>",
+             hoverlabel = dict(bgcolor = 'yellow', font_size=14,
+                              font_family="Arial"),
             row=1
         )
 
         fig.update_xaxes(
             tickvals=np.cumsum(widths) - widths / 2,
             # ticktext=["%s<br>%d" % (l, w) for l, w in zip(labels, widths)]
-            ticktext=[pd.to_datetime(d).strftime('%d/%m/%y') for d in df_weekly_cases_level_up['data'].unique()],
-        )
+            ticktext=[pd.to_datetime(d).strftime('%m/%y') for d in df_weekly_cases_level_up['data'].unique()], 
+            tickfont_size=14,  tickangle = 90     )
 
         fig.update_layout(yaxis_title="Óbitos semanais",
                           font=dict(
@@ -703,9 +711,9 @@ def descriptive_models():
                           hoverlabel=dict(
                               bgcolor="white",
                               font_size=14,
-                              font_family="Rockwell"
+                              font_family="Arial"
                           ),
-                          xaxis_tickformat='%d %B (%a)<br>%Y',
+                          xaxis_tickformat='<b>%d %B (%a)<br>%Y </b>',
                           barmode='stack',
                           )
 
@@ -839,10 +847,10 @@ st.write(f"""<div>
          )
 if page == 'Início':
     about()
-elif page == 'Modelos preditivos':
-    predictive_models()
 elif page == 'Modelos descritivos':
     descriptive_models()
+elif page == 'Modelos preditivos':
+    predictive_models()
 elif page == 'Sobre':
     about()
 
