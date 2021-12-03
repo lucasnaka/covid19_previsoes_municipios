@@ -58,19 +58,23 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    # df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_grouped.parquet')
-    # df_depara_levels = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/depara_levels.parquet')
-    # df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
-    # df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
-    # json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
-    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
+    #df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_grouped.parquet')
     df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
-    df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
-    df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
-    df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
-    df_predictions_waves = pd.read_parquet('../data/app/ajusteSPonda0.parquet')
-    json_file = open('../data/app/cities_shape.json')
+    df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_grouped_new.parquet')
+    df_depara_levels = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/depara_levels.parquet')
+    df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
+    json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
+    #df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
+    #df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
+    #df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
+    #df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    #df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
+    #df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
+    #df_predictions_waves = pd.read_parquet('../data/app/ajusteSPonda0.parquet')
+    #json_file = open('../data/app/cities_shape.json')
+    #df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped_new.parquet')
+
 
     df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
     df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
@@ -596,7 +600,7 @@ def descriptive_models():
                 width=widths,
                 offset=0,
                 showlegend=False,
-                # marker_color=next(palette),
+                #marker_color=next(palette),
             )
             fig.append_trace(trace1, 1, 1)
 
@@ -682,21 +686,31 @@ def descriptive_models():
                                )
 
             fig.append_trace(trace_bar, 2, 1)
+            fig.update_layout(yaxis_title="Óbitos semanais",legend=dict(
+            y=0.23,
+            xanchor="left",
+            x=0.010,
+            traceorder="reversed",
+            title_font_family="Times New Roman", bgcolor = 'rgba(0,50,10,0.4)'))
 
         ################################################################################################################
         ######################################     Ajustar layout das figuras     ######################################
         ################################################################################################################
+        list_at = ['Propaganda', 'Atos de Governo', 'Atos normativos',
+       'Atos de gestão,Atos normativos', 'Atos de Governo,Propaganda',
+       'Atos normativos,Propaganda', 'null']
+        
         fig.update_traces(
             hovertemplate="%{customdata}<extra></extra>",
-             hoverlabel = dict(bgcolor = 'yellow', font_size=14,
-                              font_family="Arial"),
+             hoverlabel =  dict(bgcolor=np.where(df_weekly_cases_level_up_fixed['tipo_at'].isin(list_at),'white', 'blue')),
             row=1
         )
 
+ 
         fig.update_xaxes(
             tickvals=np.cumsum(widths) - widths / 2,
             # ticktext=["%s<br>%d" % (l, w) for l, w in zip(labels, widths)]
-            ticktext=[pd.to_datetime(d).strftime('%m/%y') for d in df_weekly_cases_level_up['data'].unique()], 
+            ticktext=[pd.to_datetime(d).strftime('%b/%y') for d in df_weekly_cases_level_up['data'].unique()], 
             tickfont_size=14,  tickangle = 90     )
 
         fig.update_layout(yaxis_title="Óbitos semanais",
@@ -847,9 +861,9 @@ st.write(f"""<div>
          )
 if page == 'Início':
     about()
-elif page == 'Modelos descritivos':
-    descriptive_models()
 elif page == 'Modelos preditivos':
+    descriptive_models()
+elif page == 'Modelos descritivos':
     predictive_models()
 elif page == 'Sobre':
     about()
