@@ -42,7 +42,7 @@ st.sidebar.title('Menu')
 # selected_page = st.sidebar.radio('Paginas', pages)
 page = st_btn_select(
     # The different pages
-    ('Início', 'Modelos descritivos','Modelos preditivos', 'Sobre'),
+    ('Início', 'Modelos descritivos', 'Modelos preditivos', 'Sobre'),
     # Enable navbar
     nav=True,
     # You can pass a formatting function. Here we capitalize the options
@@ -63,21 +63,23 @@ def load_data():
     # df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
     # df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
     # json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
-    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
-    df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
+    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped_v2.parquet')
+    df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios_v2.parquet')
     df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
     df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
+    df_regional_clusters = pd.read_parquet('../data/app/clusters_v4.parquet')
     df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
     df_predictions_waves = pd.read_parquet('../data/app/ajusteSPonda0.parquet')
-    json_file = open('../data/app/cities_shape.json')
+    df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
+    json_file = open('../data/app/cities_shape_v4.json')
+    json_cities_shape = json.load(json_file)
 
     df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
     df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
     df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
     df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
     df_predictions_waves['data'] = pd.to_datetime(df_predictions_waves['data'])
-    json_cities_shape = json.load(json_file)
+
     return df_depara_levels, df_vaccine, df_regional_clusters, json_cities_shape, df_daily_deaths, df_weekly_deaths, \
            df_death_predictions, df_predictions_waves
 
@@ -149,6 +151,8 @@ def initialize_selectbox_level():
         'sbox_reg_saude': [None, None],
         'sbox_cities': [None, None],
     }
+
+
 level_filter_states = initialize_selectbox_level()
 
 
@@ -327,6 +331,7 @@ def common_filters_desc(df_vacina, df_daily_deaths, df_weekly_cases, df_death_pr
 
         cities_shape_filtered = None
         level = 'estado'
+        selected_filters['region'] = selected_reg
 
     elif selected_state and not selected_regsaude and not selected_city:
         df_daily_deaths_filtered = pd.DataFrame()
@@ -339,6 +344,7 @@ def common_filters_desc(df_vacina, df_daily_deaths, df_weekly_cases, df_death_pr
 
         cities_shape_filtered = None
         level = 'nomeRegiaoSaude'
+        selected_filters['state'] = selected_state
 
     elif selected_regsaude and not selected_city:
         df_daily_deaths_filtered = pd.DataFrame()
@@ -350,6 +356,7 @@ def common_filters_desc(df_vacina, df_daily_deaths, df_weekly_cases, df_death_pr
         df_predictions_waves_filtered = pd.DataFrame()
         cities_shape_filtered = None
         level = 'municipio'
+        selected_filters['reg_saude'] = selected_regsaude
 
     elif selected_city:
         df_daily_deaths_filtered = df_daily_deaths.loc[(df_daily_deaths['codmun'] == selected_city)]
@@ -361,14 +368,14 @@ def common_filters_desc(df_vacina, df_daily_deaths, df_weekly_cases, df_death_pr
         df_predictions_waves_filtered = df_predictions_waves.loc[
             df_predictions_waves['codmun'] == selected_city]
 
-        selected_filters['cluster'] = \
-            df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_city, 'cluster'].iloc[0]
+        selected_filters['cluster'] = df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_city, 'cluster'].iloc[0]
 
         cities_filtered_list = [x for x in cities_shape['features'] if
                                 x['properties']['cluster'] == selected_filters['cluster']]
         cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
 
         level = 'municipio'
+        selected_filters['city'] = selected_city
 
     else:
         df_daily_deaths_filtered = pd.DataFrame()
@@ -399,6 +406,104 @@ def home():
     st.title('Início')
 
 
+def plot_daily_deaths(df):
+    data = [go.Scatter(
+        x=df['data'],
+        y=df['obitosNovos'],
+        line=dict(color='rgb(1, 87, 155)'),
+        mode='lines',
+        # customdata=df_daily_deaths_filtered['obitosPreditos'],
+        showlegend=False,
+    )]
+
+    fig = go.Figure(data=data)
+
+    return fig
+
+
+def plot_trend_waves(df, fig):
+    for group, dfg in df.groupby(by='onda'):
+        fig.add_trace(go.Scatter(name=group,
+                                 x=dfg['data'],
+                                 y=dfg['obitosPreditos'],
+                                 showlegend=False,
+                                 # marker_color=next(palette),
+                                 )
+                      )
+
+
+def plot_adjusted_wave(df, fig):
+    fig.add_trace(go.Scatter(
+        x=df['data'],
+        y=df['obitosPreditos'],
+        line=dict(color='rgb(129, 212, 250)'),
+        mode='lines',
+        customdata=df['obitosPreditos'],
+        showlegend=False
+    )
+    )
+    fig.add_trace(go.Scatter(
+        name='Upper Bound',
+        x=df['data'],
+        y=df['upper'],
+        line=dict(width=0),
+        mode='lines',
+        customdata=df['upper'],
+        marker=dict(color="#444"),
+        showlegend=False
+    )
+    )
+    fig.add_trace(go.Scatter(
+        name='Lower Bound',
+        x=df['data'],
+        y=df['lower'],
+        line=dict(width=0),
+        mode='lines',
+        customdata=df['lower'],
+        marker=dict(color="#444"),
+        showlegend=False,
+        fillcolor='rgba(68, 68, 68, 0.2)',
+        fill='tonexty',
+    )
+    )
+
+
+def plot_sarima_prediction(df, fig):
+    fig.add_trace(go.Scatter(
+        x=df['week_number_day'],
+        y=df['obitosPreditos'],
+        line=dict(color='rgb(0,100,80)'),
+        mode='lines',
+        customdata=df['obitosPreditos'],
+        showlegend=False
+    )
+    )
+    fig.add_trace(go.Scatter(
+        name='Upper Bound',
+        x=df['week_number_day'],
+        y=df['upper'],
+        line=dict(width=0),
+        mode='lines',
+        customdata=df['upper'],
+        marker=dict(color="#444"),
+        showlegend=False
+    )
+    )
+    fig.add_trace(go.Scatter(
+        name='Lower Bound',
+        x=df['week_number_day'],
+        y=df['lower'],
+        line=dict(width=0),
+        mode='lines',
+        customdata=df['lower'],
+        marker=dict(color="#444"),
+        showlegend=False,
+        fillcolor='rgba(68, 68, 68, 0.3)',
+        fill='tonexty',
+    )
+    )
+
+
 def predictive_models():
     st.write(
         """
@@ -417,132 +522,97 @@ def predictive_models():
                                                         df_clusters,
                                                         cities_shape,
                                                         df_predictions_waves)
-    st.write(selected_filters)
+
     selected_models = filter_models()
 
     with st.container():
-        col1, col2 = st.columns([1.5, 1])
+        col1, col2 = st.columns(2)
         with col1:
             if not df_daily_deaths_filtered.empty:
-                data = [go.Scatter(
-                    x=df_daily_deaths_filtered['data'],
-                    y=df_daily_deaths_filtered['obitosNovos'],
-                    line=dict(color='rgb(0,100,80)'),
-                    mode='lines',
-                    # customdata=df_daily_deaths_filtered['obitosPreditos'],
-                    showlegend=False
-                )]
-
-                fig = go.Figure(data=data)
+                fig = plot_daily_deaths(df_daily_deaths_filtered)
 
                 df_adjusted_wave = df_predictions_waves_filtered.loc[df_predictions_waves_filtered['onda'] == 0]
                 df_trend_waves = df_predictions_waves_filtered.loc[df_predictions_waves_filtered['onda'] != 0]
 
                 if 'Ondas de tendência' in selected_models:
-                    for group, dfg in df_trend_waves.groupby(by='onda'):
-                        fig.add_trace(go.Scatter(name=group,
-                                                 x=dfg['data'],
-                                                 y=dfg['obitosPreditos'],
-                                                 showlegend=False,
-                                                 # marker_color=next(palette),
-                                                 )
-                                      )
+                    plot_trend_waves(df_trend_waves, fig)
+
                 if 'Ondas ajustadas' in selected_models:
-                    fig.add_trace(go.Scatter(
-                        x=df_adjusted_wave['data'],
-                        y=df_adjusted_wave['obitosPreditos'],
-                        mode='lines',
-                        customdata=df_adjusted_wave['obitosPreditos'],
-                        showlegend=False
-                    )
-                    )
-                    fig.add_trace(go.Scatter(
-                        name='Upper Bound',
-                        x=df_adjusted_wave['data'],
-                        y=df_adjusted_wave['upper'],
-                        line=dict(width=0),
-                        mode='lines',
-                        customdata=df_adjusted_wave['upper'],
-                        marker=dict(color="#444"),
-                        showlegend=False
-                    )
-                    )
-                    fig.add_trace(go.Scatter(
-                        name='Lower Bound',
-                        x=df_adjusted_wave['data'],
-                        y=df_adjusted_wave['lower'],
-                        line=dict(width=0),
-                        mode='lines',
-                        customdata=df_adjusted_wave['lower'],
-                        marker=dict(color="#444"),
-                        showlegend=False,
-                        fillcolor='rgba(68, 68, 68, 0.3)',
-                        fill='tonexty',
-                    )
-                    )
+                    plot_adjusted_wave(df_adjusted_wave, fig)
 
                 if 'SARIMA' in selected_models and not df_predictions_filtered.empty:
-                    fig.add_trace(go.Scatter(
-                        x=df_predictions_filtered['week_number_day'],
-                        y=df_predictions_filtered['obitosPreditos'],
-                        line=dict(color='rgb(0,100,80)'),
-                        mode='lines',
-                        customdata=df_predictions_filtered['obitosPreditos'],
-                        showlegend=False
-                    )
-                    )
-                    fig.add_trace(go.Scatter(
-                        name='Upper Bound',
-                        x=df_predictions_filtered['week_number_day'],
-                        y=df_predictions_filtered['upper'],
-                        line=dict(width=0),
-                        mode='lines',
-                        customdata=df_predictions_filtered['upper'],
-                        marker=dict(color="#444"),
-                        showlegend=False
-                    )
-                    )
-                    fig.add_trace(go.Scatter(
-                        name='Lower Bound',
-                        x=df_predictions_filtered['week_number_day'],
-                        y=df_predictions_filtered['lower'],
-                        line=dict(width=0),
-                        mode='lines',
-                        customdata=df_predictions_filtered['lower'],
-                        marker=dict(color="#444"),
-                        showlegend=False,
-                        fillcolor='rgba(68, 68, 68, 0.3)',
-                        fill='tonexty',
-                    )
-                    )
+                    plot_sarima_prediction(df_predictions_filtered, fig)
 
                 st.plotly_chart(fig, use_container_width=True)
+                
+                fig = px.choropleth_mapbox(
+                    df_clusters,  # banco de dados da soja
+                    locations="codarea",  # definindo os limites no mapa
+                    featureidkey="properties.codarea",
+                    geojson=cities_shape_filtered,  # definindo as delimitações geográficas
+                    #     color="cluster", # definindo a cor através da base de dados
+                    custom_data=[df_clusters['Município'],
+                                 df_clusters['Estabelecimentos de Saúde SUS'],
+                                 df_clusters['AREA_KM2'],
+                                 df_clusters['Índice de Desenvolvimento Humano Municipal - 2010 (IDHM 2010)'],
+                                 df_clusters['PIB per capita a preços correntes']],
+                    # title='Indice de Letalitade por Região',
+                    mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
+                    zoom=3,  # o tamanho do gráfico
+                    opacity=0.5,  # opacidade da cor do map
+                    center={"lat": -14, "lon": -55},
+                    # width=500, height=500,
+                )
+                fig.update_layout(  # title="Cidades similares",
+                    # title_font_color="black",
+                    font=dict(
+                        family="arial",
+                        size=14),
+                    template="plotly_white",
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    showlegend=False,
+                    margin=dict(b=0))
+                fig.update_traces(hovertemplate=('<b>Cidade</b>: %{customdata[0]}<br>' +
+                                   '<b>N° estabelecimentos SUS</b>: %{customdata[1]}' +
+                                   '<br><b>Área (km²)</b>: %{customdata[2]}' +
+                                   '<br><b>IDH</b>: %{customdata[3]}' +
+                                   '<br><b>PIB per capita</b>: %{customdata[4]}'),)
+                st.plotly_chart(fig, use_container_width=True)
 
-            fig = px.choropleth_mapbox(
-                df_clusters,  # banco de dados da soja
-                locations="codarea",  # definindo os limites no mapa
-                featureidkey="properties.codarea",
-                geojson=cities_shape_filtered,  # definindo as delimitações geográficas
-                #     color="cluster", # definindo a cor através da base de dados
-                hover_name="Município",  # pontos que você quer mostrar na caixinha de informação
-                hover_data=['Município', 'cluster'],
-                # title='Indice de Letalitade por Região',
-                mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
-                zoom=3,  # o tamanho do gráfico
-                opacity=0.5,  # opacidade da cor do map
-                center={"lat": -14, "lon": -55},
-                # width=500, height=500,
-            )
-            fig.update_layout(  # title="Cidades similares",
-                # title_font_color="black",
-                font=dict(
-                    family="arial",
-                    size=14),
-                template="plotly_white",
-                plot_bgcolor='rgba(0,0,0,0)',
-                showlegend=False,
-                margin=dict(b=0))
-            st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            if 'cluster' in selected_filters.keys():
+                list_similar_cities = list(set(df_clusters.loc[df_clusters['cluster'] == selected_filters[
+                    'cluster'], 'codigo_ibge_2'].unique()) - set([selected_filters['city']]))
+                if len(list_similar_cities) > 0:
+                    for codmun in list_similar_cities:
+                        df_sc_deaths = df_daily_deaths.loc[df_daily_deaths['codmun'] == codmun]
+                        df_sc_waves = df_predictions_waves.loc[df_predictions_waves['codmun'] == codmun]
+                        df_sc_sarima = df_death_predictions.loc[df_death_predictions['codmun'] == codmun]
+
+                        df_sc_adjusted_wave = df_sc_waves.loc[df_sc_waves['onda'] == 0]
+                        df_sc_trend_waves = df_sc_waves.loc[df_sc_waves['onda'] != 0]
+
+                        fig = plot_daily_deaths(df_sc_deaths)
+
+                        if 'Ondas de tendência' in selected_models:
+                            plot_trend_waves(df_sc_trend_waves, fig)
+
+                        if 'Ondas ajustadas' in selected_models:
+                            plot_adjusted_wave(df_sc_adjusted_wave, fig)
+
+                        if 'SARIMA' in selected_models and not df_sc_sarima.empty:
+                            plot_sarima_prediction(df_sc_sarima, fig)
+
+                        fig.update_layout(
+                            title=df_daily_deaths.loc[df_daily_deaths['codmun'] == codmun, 'municipio'].iloc[0],
+                            title_font_family="Times New Roman",
+                            title_font_color="rgb(1, 87, 155)",
+                            title_x=0.5,
+                            margin=dict(l=20, r=20, t=25, b=0),
+                            height=200,
+                        )
+
+                        st.plotly_chart(fig, use_container_width=True)
 
 
 def descriptive_models():
@@ -602,8 +672,9 @@ def descriptive_models():
 
             # Como o gráfico é um stacked bar, para corrigir a quantidade de óbitos devemos fazer a diferença entre os
             # óbitos no nível acima do selecionado e o nível selecionado
-            df_weekly_cases_level_up_fixed = df_weekly_cases_level_up.merge(df_weekly_cases_level_selected, how='left',
-                                                                            on=['week_number', 'noticia'])
+            df_weekly_cases_level_up_fixed = df_weekly_cases_level_up.merge(
+                df_weekly_cases_level_selected[['week_number', 'new_deaths_week_division']], how='left',
+                on=['week_number'])
             df_weekly_cases_level_up_fixed['new_deaths_week_division'] = df_weekly_cases_level_up_fixed[
                                                                              'new_deaths_week_division_x'] - \
                                                                          df_weekly_cases_level_up_fixed[
@@ -626,45 +697,8 @@ def descriptive_models():
                 line=dict(
                     color='rgba(219, 64, 82, 1.0)',
                     width=2)
-        ))
+            ))
         fig.append_trace(trace2, 1, 1)
-        
-
-        # Plotar as predições de óbitos diária
-        if not df_predictions_filtered.empty:  # Plotar apenas se o usuário chegou a selecionar algum município
-            trace3 = go.Scatter(
-                x=df_predictions_filtered['week_number_day'],
-                y=df_predictions_filtered['obitosPreditos'],
-                line=dict(color='rgb(0,100,80)'),
-                mode='lines',
-                customdata=df_predictions_filtered['obitosPreditos'],
-                showlegend=False
-            )
-            trace4 = go.Scatter(
-                name='Upper Bound',
-                x=df_predictions_filtered['week_number_day'],
-                y=df_predictions_filtered['upper'],
-                line=dict(width=0),
-                mode='lines',
-                customdata=df_predictions_filtered['upper'],
-                marker=dict(color="#444"),
-                showlegend=False
-            )
-            trace5 = go.Scatter(
-                name='Lower Bound',
-                x=df_predictions_filtered['week_number_day'],
-                y=df_predictions_filtered['lower'],
-                line=dict(width=0),
-                mode='lines',
-                customdata=df_predictions_filtered['lower'],
-                marker=dict(color="#444"),
-                showlegend=False,
-                fillcolor='rgba(68, 68, 68, 0.3)',
-                fill='tonexty',
-            )
-            fig.append_trace(trace3, 1, 1)
-            fig.append_trace(trace4, 1, 1)
-            fig.append_trace(trace5, 1, 1)
 
         ################################################################################################################
         ###########################################     Gráfico de baixo     ###########################################
@@ -688,16 +722,16 @@ def descriptive_models():
         ################################################################################################################
         fig.update_traces(
             hovertemplate="%{customdata}<extra></extra>",
-             hoverlabel = dict(bgcolor = 'yellow', font_size=14,
-                              font_family="Arial"),
+            hoverlabel=dict(bgcolor='yellow', font_size=14,
+                            font_family="Arial"),
             row=1
         )
 
         fig.update_xaxes(
             tickvals=np.cumsum(widths) - widths / 2,
             # ticktext=["%s<br>%d" % (l, w) for l, w in zip(labels, widths)]
-            ticktext=[pd.to_datetime(d).strftime('%m/%y') for d in df_weekly_cases_level_up['data'].unique()], 
-            tickfont_size=14,  tickangle = 90     )
+            ticktext=[pd.to_datetime(d).strftime('%m/%y') for d in df_weekly_cases_level_up['data'].unique()],
+            tickfont_size=14, tickangle=90)
 
         fig.update_layout(yaxis_title="Óbitos semanais",
                           font=dict(
