@@ -386,6 +386,11 @@ header>.toolbar { /* Hide toolbar menu */
     box-sizing: border-box;
 }
 
+.cluster-scroll-down {
+    height: 100vh;
+    overflow-y: scroll;
+}
+
 /* Base components
 .bigger-wrapper {
     padding: 5rem;
