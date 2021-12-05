@@ -65,30 +65,37 @@ def load_data():
     # df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
     # df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
     # df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
-    df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
-    df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
-    df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
-    df_regional_clusters = pd.read_parquet('https://drive.google.com/uc?id=1QwvfLf-bH5lwSCLgN297esxM0GvvnUQB')
-    df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
-    df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
-    df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
-    # json_file = open('../data/app/cities_shape.json')
-    # json_cities_shape = json.load(json_file)
+    # df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
+    # df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
+    # df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
+    # df_regional_clusters = pd.read_parquet('https://drive.google.com/uc?id=1QwvfLf-bH5lwSCLgN297esxM0GvvnUQB')
+    # df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
+    # df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
+    # df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
+    json_file = open('./data/app/cities_shape.json')
+    json_cities_shape = json.load(json_file)
     # json_cities_shape = utils.get_cities_shape()
-    json_cities_shape=None
+    # json_cities_shape=None
 
     # df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
-    df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
-    df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
-    df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
-    df_predictions_waves['data'] = pd.to_datetime(df_predictions_waves['data'])
+    # df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
+    # df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
+    # df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
+    # df_predictions_waves['data'] = pd.to_datetime(df_predictions_waves['data'])
+
+    df_weekly_deaths = None
+    df_daily_deaths = None
+    df_depara_levels = None
+    df_regional_clusters = None
+    df_death_predictions = None
+    df_predictions_waves = None
 
     return df_depara_levels, df_regional_clusters, json_cities_shape, df_daily_deaths, df_weekly_deaths, \
            df_death_predictions, df_predictions_waves
 
 
-# df_depara_levels, df_clusters, cities_shape, df_daily_deaths, df_weekly_deaths, df_death_predictions, \
-# df_predictions_waves = load_data()
+df_depara_levels, df_clusters, cities_shape, df_daily_deaths, df_weekly_deaths, df_death_predictions, \
+df_predictions_waves = load_data()
 
 
 @st.cache(allow_output_mutation=True)
