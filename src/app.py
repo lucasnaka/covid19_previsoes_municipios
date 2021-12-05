@@ -64,21 +64,21 @@ def load_data():
     # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
     df_regional_clusters = pd.read_parquet('./data/webapp/clusters.parquet')
     df_death_predictions = pd.read_parquet('./data/webapp/death_predictions.parquet')
-    # df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
+    df_predictions_waves = pd.read_parquet('./data/app/ajuste_ondas.parquet')
     # df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
     # df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
     # df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
     # df_regional_clusters = pd.read_parquet('https://drive.google.com/uc?id=1QwvfLf-bH5lwSCLgN297esxM0GvvnUQB')
     # df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
     # df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
-    # df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
+    df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
     json_file = open('./data/app/cities_shape.json')
     json_cities_shape = json.load(json_file)
 
     df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
     df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
     df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
-    # df_predictions_waves['data'] = pd.to_datetime(df_predictions_waves['data'])
+    df_predictions_waves['data'] = pd.to_datetime(df_predictions_waves['data'])
 
     df_predictions_waves = None
 
@@ -101,7 +101,7 @@ def load_list_levels(df):
     return dict_city_code, dict_reg_saude_code, list_state, list_regions
 
 
-# dict_city_code, dict_reg_saude_code, list_states, list_regions = load_list_levels(df_depara_levels)
+dict_city_code, dict_reg_saude_code, list_states, list_regions = load_list_levels(df_depara_levels)
 
 
 @st.cache(allow_output_mutation=True)
@@ -156,7 +156,7 @@ def initialize_selectbox_level():
     }
 
 
-# level_filter_states = initialize_selectbox_level()
+level_filter_states = initialize_selectbox_level()
 
 
 def clear_selectbox_on_change(level_filter_state, selected_level, element_to_clear):
@@ -994,9 +994,9 @@ st.write(f"""<div>
          )
 if page == 'Início':
     about()
-# elif page == 'Modelos descritivos':
-#     descriptive_models()
-# elif page == 'Modelos preditivos':
-#     predictive_models()
-# elif page == 'Sobre':
-#     about()
+elif page == 'Modelos descritivos':
+    descriptive_models()
+elif page == 'Modelos preditivos':
+    predictive_models()
+elif page == 'Sobre':
+    about()
