@@ -58,11 +58,6 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    # df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/covid_saude_obito_grouped.parquet')
-    # df_depara_levels = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/depara_levels.parquet')
-    # df_vaccine = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/opendatasus_vacinacao.parquet')
-    # df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/clusters.parquet')
-    # json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
     df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped_v2.parquet')
     df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios_v3.parquet')
     df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
@@ -822,13 +817,19 @@ def descriptive_models():
         ################################################################################################################
         ######################################     Ajustar layout das figuras     ######################################
         ################################################################################################################
+        list_at = ['Propaganda', 'Atos de Governo', 'Atos normativos',
+       'Atos de gestão,Atos normativos', 'Atos de Governo,Propaganda',
+       'Atos normativos,Propaganda', 'null']
+        
         fig.update_traces(
             hovertemplate="%{customdata}<extra></extra>",
             hoverlabel=dict(bgcolor='white', font_size=14,
                             font_family="Arial"),
+            # hoverlabel =  dict(bgcolor=np.where(df_weekly_cases_level_up_fixed['tipo_at'].isin(list_at),'white', 'blue')),
             row=1
         )
 
+ 
         fig.update_xaxes(
             tickvals=np.cumsum(widths) - widths / 2,
             # ticktext=["%s<br>%d" % (l, w) for l, w in zip(labels, widths)]
@@ -984,9 +985,9 @@ st.write(f"""<div>
          )
 if page == 'Início':
     about()
-elif page == 'Modelos descritivos':
-    descriptive_models()
 elif page == 'Modelos preditivos':
+    descriptive_models()
+elif page == 'Modelos descritivos':
     predictive_models()
 elif page == 'Sobre':
     about()
