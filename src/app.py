@@ -58,16 +58,24 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
-    df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
-    df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
-    # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
-    df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
-    df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
+    # df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
+    # df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
+    # df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
+    # # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    # df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
+    # df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
+    # df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
+    df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
+    df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
+    df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
+    df_regional_clusters = pd.read_parquet('https://drive.google.com/uc?id=1QwvfLf-bH5lwSCLgN297esxM0GvvnUQB')
+    df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
+    df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
     df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
-    json_file = open('../data/app/cities_shape.json')
-    json_cities_shape = json.load(json_file)
+    # json_file = open('../data/app/cities_shape.json')
+    # json_cities_shape = json.load(json_file)
+    # json_cities_shape = utils.get_cities_shape()
+    json_cities_shape=None
 
     # df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
     df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
@@ -332,9 +340,10 @@ def common_filters_desc(df_daily_deaths, df_weekly_cases, df_death_predictions, 
         selected_filters['cluster'] = df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_city, 'cluster'].iloc[0]
         selected_filters['city_name'] = df_daily_deaths.loc[(df_daily_deaths['codmun'] == selected_city), 'municipio'].iloc[0]
 
-        cities_filtered_list = [x for x in cities_shape['features'] if
-                                x['properties']['cluster'] == selected_filters['cluster']]
-        cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
+        # cities_filtered_list = [x for x in cities_shape['features'] if
+        #                         x['properties']['cluster'] == selected_filters['cluster']]
+        # cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
+        cities_shape_filtered = None
 
         level = 'municipio'
         selected_filters['city'] = selected_city
@@ -592,39 +601,39 @@ def predictive_models():
                     unsafe_allow_html=True,
                 )
 
-                fig = px.choropleth_mapbox(
-                    df_clusters,  # banco de dados da soja
-                    locations="codarea",  # definindo os limites no mapa
-                    featureidkey="properties.codarea",
-                    geojson=cities_shape_filtered,  # definindo as delimitações geográficas
-                    #     color="cluster", # definindo a cor através da base de dados
-                    custom_data=[df_clusters['Município'],
-                                 df_clusters['Estabelecimentos de Saúde SUS'],
-                                 df_clusters['AREA_KM2'],
-                                 df_clusters['Índice de Desenvolvimento Humano Municipal - 2010 (IDHM 2010)'],
-                                 df_clusters['PIB per capita a preços correntes']],
-                    # title='Indice de Letalitade por Região',
-                    mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
-                    zoom=3,  # o tamanho do gráfico
-                    opacity=0.5,  # opacidade da cor do map
-                    center={"lat": -14, "lon": -55},
-                    # width=500, height=500,
-                )
-                fig.update_layout(  # title="Cidades similares",
-                    # title_font_color="black",
-                    font=dict(
-                        family="arial",
-                        size=14),
-                    template="plotly_white",
-                    plot_bgcolor='rgba(0,0,0,0)',
-                    showlegend=False,
-                    margin=dict(b=0))
-                fig.update_traces(hovertemplate=('<b>Cidade</b>: %{customdata[0]}<br>' +
-                                   '<b>N° estabelecimentos SUS</b>: %{customdata[1]}' +
-                                   '<br><b>Área (km²)</b>: %{customdata[2]}' +
-                                   '<br><b>IDH</b>: %{customdata[3]}' +
-                                   '<br><b>PIB per capita</b>: %{customdata[4]}'),)
-                st.plotly_chart(fig, use_container_width=True)
+                # fig = px.choropleth_mapbox(
+                #     df_clusters,  # banco de dados da soja
+                #     locations="codarea",  # definindo os limites no mapa
+                #     featureidkey="properties.codarea",
+                #     geojson=cities_shape_filtered,  # definindo as delimitações geográficas
+                #     #     color="cluster", # definindo a cor através da base de dados
+                #     custom_data=[df_clusters['Município'],
+                #                  df_clusters['Estabelecimentos de Saúde SUS'],
+                #                  df_clusters['AREA_KM2'],
+                #                  df_clusters['Índice de Desenvolvimento Humano Municipal - 2010 (IDHM 2010)'],
+                #                  df_clusters['PIB per capita a preços correntes']],
+                #     # title='Indice de Letalitade por Região',
+                #     mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
+                #     zoom=3,  # o tamanho do gráfico
+                #     opacity=0.5,  # opacidade da cor do map
+                #     center={"lat": -14, "lon": -55},
+                #     # width=500, height=500,
+                # )
+                # fig.update_layout(  # title="Cidades similares",
+                #     # title_font_color="black",
+                #     font=dict(
+                #         family="arial",
+                #         size=14),
+                #     template="plotly_white",
+                #     plot_bgcolor='rgba(0,0,0,0)',
+                #     showlegend=False,
+                #     margin=dict(b=0))
+                # fig.update_traces(hovertemplate=('<b>Cidade</b>: %{customdata[0]}<br>' +
+                #                    '<b>N° estabelecimentos SUS</b>: %{customdata[1]}' +
+                #                    '<br><b>Área (km²)</b>: %{customdata[2]}' +
+                #                    '<br><b>IDH</b>: %{customdata[3]}' +
+                #                    '<br><b>PIB per capita</b>: %{customdata[4]}'),)
+                # st.plotly_chart(fig, use_container_width=True)
 
             else:
                 st.write(
@@ -985,9 +994,9 @@ st.write(f"""<div>
          )
 if page == 'Início':
     about()
-elif page == 'Modelos preditivos':
-    descriptive_models()
 elif page == 'Modelos descritivos':
+    descriptive_models()
+elif page == 'Modelos preditivos':
     predictive_models()
 elif page == 'Sobre':
     about()
