@@ -58,12 +58,12 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    # df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
-    # df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
-    # df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
-    # # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    # df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
-    # df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
+    df_weekly_deaths = pd.read_parquet('../data/webapp/covid_saude_obito_grouped.parquet')
+    df_daily_deaths = pd.read_parquet('../data/webapp/covid_saude_obitos_diarios.parquet')
+    df_depara_levels = pd.read_parquet('../data/webapp/depara_levels.parquet')
+    # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('../data/webapp/clusters.parquet')
+    df_death_predictions = pd.read_parquet('../data/webapp/death_predictions.parquet')
     # df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
     # df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
     # df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
@@ -74,20 +74,12 @@ def load_data():
     # df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
     json_file = open('./data/app/cities_shape.json')
     json_cities_shape = json.load(json_file)
-    # json_cities_shape = utils.get_cities_shape()
-    # json_cities_shape=None
 
-    # df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
-    # df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
-    # df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
-    # df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
+    df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
+    df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
+    df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
     # df_predictions_waves['data'] = pd.to_datetime(df_predictions_waves['data'])
 
-    df_weekly_deaths = None
-    df_daily_deaths = None
-    df_depara_levels = None
-    df_regional_clusters = None
-    df_death_predictions = None
     df_predictions_waves = None
 
     return df_depara_levels, df_regional_clusters, json_cities_shape, df_daily_deaths, df_weekly_deaths, \
