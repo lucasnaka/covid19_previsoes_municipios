@@ -58,15 +58,15 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped_v2.parquet')
-    df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios_v3.parquet')
+    df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
+    df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
     df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
     # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('../data/app/clusters_v4.parquet')
+    df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
     df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
-    df_predictions_waves = pd.read_parquet('../data/app/ajusteSPondasTeste2.parquet')
+    df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
     df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
-    json_file = open('../data/app/cities_shape_v4.json')
+    json_file = open('../data/app/cities_shape.json')
     json_cities_shape = json.load(json_file)
 
     # df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
