@@ -985,7 +985,13 @@ def about():
 
 
 # utils.localCSS(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\src\style.css")
-utils.localCSS("style.css")
+# utils.localCSS("style.css")
+
+from os import listdir
+from os.path import isfile, join
+onlyfiles = [f for f in listdir('/') if isfile(join('/', f))]
+st.write(onlyfiles)
+
 st.write(f"""<div>
             <div class="base-wrapper flex flex-column" style="background-color:#0277bd">
                 <div class="white-span header p1" style="font-size:30px;">Acompanhamento Covid-19 - ICMC/MECAI - USP</div>
