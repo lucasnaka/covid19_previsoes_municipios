@@ -80,8 +80,6 @@ def load_data():
     df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
     df_predictions_waves['data'] = pd.to_datetime(df_predictions_waves['data'])
 
-    df_predictions_waves = None
-
     return df_depara_levels, df_regional_clusters, json_cities_shape, df_daily_deaths, df_weekly_deaths, \
            df_death_predictions, df_predictions_waves
 
