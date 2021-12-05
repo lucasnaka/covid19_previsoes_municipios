@@ -87,8 +87,8 @@ def load_data():
            df_death_predictions, df_predictions_waves
 
 
-df_depara_levels, df_clusters, cities_shape, df_daily_deaths, df_weekly_deaths, df_death_predictions, \
-df_predictions_waves = load_data()
+# df_depara_levels, df_clusters, cities_shape, df_daily_deaths, df_weekly_deaths, df_death_predictions, \
+# df_predictions_waves = load_data()
 
 
 @st.cache(allow_output_mutation=True)
@@ -102,7 +102,7 @@ def load_list_levels(df):
     return dict_city_code, dict_reg_saude_code, list_state, list_regions
 
 
-dict_city_code, dict_reg_saude_code, list_states, list_regions = load_list_levels(df_depara_levels)
+# dict_city_code, dict_reg_saude_code, list_states, list_regions = load_list_levels(df_depara_levels)
 
 
 @st.cache(allow_output_mutation=True)
@@ -157,7 +157,7 @@ def initialize_selectbox_level():
     }
 
 
-level_filter_states = initialize_selectbox_level()
+# level_filter_states = initialize_selectbox_level()
 
 
 def clear_selectbox_on_change(level_filter_state, selected_level, element_to_clear):
@@ -994,9 +994,9 @@ st.write(f"""<div>
          )
 if page == 'Início':
     about()
-elif page == 'Modelos descritivos':
-    descriptive_models()
-elif page == 'Modelos preditivos':
-    predictive_models()
-elif page == 'Sobre':
-    about()
+# elif page == 'Modelos descritivos':
+#     descriptive_models()
+# elif page == 'Modelos preditivos':
+#     predictive_models()
+# elif page == 'Sobre':
+#     about()
