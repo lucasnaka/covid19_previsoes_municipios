@@ -76,20 +76,18 @@ target/
 .ipynb_checkpoints/
 
 # exclude data from source control by default
-*.parquet
+*.csv
 *.pkl
 *.h5
-*.csv
 *.xlsx
 *.xlsb
 *.gz
 *.zip
 
 # Folders
-data
-/data/
-data/
-/data
+raw
+processed
+external
 
 # Mac OS-specific storage files
 .DS_Store
