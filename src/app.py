@@ -58,12 +58,12 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    df_weekly_deaths = pd.read_parquet('../data/webapp/covid_saude_obito_grouped.parquet')
-    df_daily_deaths = pd.read_parquet('../data/webapp/covid_saude_obitos_diarios.parquet')
-    df_depara_levels = pd.read_parquet('../data/webapp/depara_levels.parquet')
+    df_weekly_deaths = pd.read_parquet('./data/webapp/covid_saude_obito_grouped.parquet')
+    df_daily_deaths = pd.read_parquet('./data/webapp/covid_saude_obitos_diarios.parquet')
+    df_depara_levels = pd.read_parquet('./data/webapp/depara_levels.parquet')
     # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('../data/webapp/clusters.parquet')
-    df_death_predictions = pd.read_parquet('../data/webapp/death_predictions.parquet')
+    df_regional_clusters = pd.read_parquet('./data/webapp/clusters.parquet')
+    df_death_predictions = pd.read_parquet('./data/webapp/death_predictions.parquet')
     # df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
     # df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
     # df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
