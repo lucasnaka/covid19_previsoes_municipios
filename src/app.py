@@ -340,7 +340,6 @@ def common_filters_desc(df_daily_deaths, df_weekly_cases, df_death_predictions, 
         cities_filtered_list = [x for x in cities_shape['features'] if
                                 x['properties']['cluster'] == selected_filters['cluster']]
         cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
-        cities_shape_filtered = None
 
         level = 'municipio'
         selected_filters['city'] = selected_city
