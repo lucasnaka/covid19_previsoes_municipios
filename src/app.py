@@ -58,13 +58,13 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    df_weekly_deaths = pd.read_parquet('./data/webapp/covid_saude_obito_grouped.parquet')
-    df_daily_deaths = pd.read_parquet('./data/webapp/covid_saude_obitos_diarios.parquet')
-    df_depara_levels = pd.read_parquet('./data/webapp/depara_levels.parquet')
+    df_weekly_deaths = pd.read_parquet('../data/webapp/covid_saude_obito_grouped.parquet')
+    df_daily_deaths = pd.read_parquet('../data/webapp/covid_saude_obitos_diarios.parquet')
+    df_depara_levels = pd.read_parquet('../data/webapp/depara_levels.parquet')
     # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    df_regional_clusters = pd.read_parquet('./data/webapp/clusters.parquet')
-    df_death_predictions = pd.read_parquet('./data/webapp/death_predictions.parquet')
-    df_predictions_waves = pd.read_parquet('./data/webapp/ajuste_ondas.parquet')
+    df_regional_clusters = pd.read_parquet('../data/webapp/clusters.parquet')
+    df_death_predictions = pd.read_parquet('../data/webapp/death_predictions.parquet')
+    df_predictions_waves = pd.read_parquet('../data/webapp/ajuste_ondas.parquet')
     # df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
     # df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
     # df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
@@ -72,7 +72,7 @@ def load_data():
     # df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
     # df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
     df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
-    json_file = open('./data/app/cities_shape.json')
+    json_file = open('../data/app/cities_shape.json')
     json_cities_shape = json.load(json_file)
 
     df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
@@ -380,7 +380,7 @@ def plot_daily_deaths(df):
     data = [go.Scatter(
         x=df['data'],
         y=df['obitosNovos'],
-        line=dict(color='rgb(1, 87, 155)'),
+        line=dict(color='rgb(79, 195, 247)'),
         mode='lines',
         # customdata=df_daily_deaths_filtered['obitosPreditos'],
         showlegend=False,
@@ -397,7 +397,7 @@ def plot_cumulative_deaths(df):
     data = [go.Scatter(
         x=df['data'],
         y=df['obitosAcumulado'],
-        line=dict(color='rgb(1, 87, 155)'),
+        line=dict(color='rgb(79, 195, 247)'),
         mode='lines',
         # customdata=df_daily_deaths_filtered['obitosPreditos'],
         showlegend=False,
@@ -414,7 +414,7 @@ def plot_cumulative_adjusted_wave(df, fig):
     fig.add_trace(go.Scatter(
         x=df['data'],
         y=df['obitosAcumPreditos'],
-        line=dict(color='rgb(129, 212, 250)'),
+        line=dict(color='rgb(1, 87, 155)'),
         mode='lines',
         customdata=df['obitosPreditos'],
         showlegend=False
@@ -452,6 +452,8 @@ def plot_trend_waves(df, fig):
                                  x=dfg['data'],
                                  y=dfg['obitosPreditos'],
                                  showlegend=False,
+                                 line=dict(
+                                     width=3)
                                  # marker_color=next(palette),
                                  )
                       )
@@ -461,7 +463,7 @@ def plot_adjusted_wave(df, fig):
     fig.add_trace(go.Scatter(
         x=df['data'],
         y=df['obitosPreditos'],
-        line=dict(color='rgb(129, 212, 250)'),
+        line=dict(color='rgb(1, 87, 155)'),
         mode='lines',
         customdata=df['obitosPreditos'],
         showlegend=False
@@ -981,7 +983,7 @@ def about():
 
 
 # utils.localCSS(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\src\style.css")
-utils.localCSS("./src/style.css")
+utils.localCSS("../src/style.css")
 
 st.write(f"""<div>
             <div class="base-wrapper flex flex-column" style="background-color:#0277bd">
