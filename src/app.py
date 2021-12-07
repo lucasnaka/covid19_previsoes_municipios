@@ -58,26 +58,23 @@ footer {visibility: hidden;}
 
 @st.cache(allow_output_mutation=True)
 def load_data():
-    # df_weekly_deaths = pd.read_parquet('../data/app/covid_saude_obito_grouped.parquet')
-    # df_daily_deaths = pd.read_parquet('../data/app/covid_saude_obitos_diarios.parquet')
-    # df_depara_levels = pd.read_parquet('../data/app/depara_levels.parquet')
-    # # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
-    # df_regional_clusters = pd.read_parquet('../data/app/clusters.parquet')
-    # df_death_predictions = pd.read_parquet('../data/app/death_predictions.parquet')
-    # df_predictions_waves = pd.read_parquet('../data/app/ajuste_ondas.parquet')
-    df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
-    df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
-    df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
-    df_regional_clusters = pd.read_parquet('https://drive.google.com/uc?id=1QwvfLf-bH5lwSCLgN297esxM0GvvnUQB')
-    df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
-    df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
+    df_weekly_deaths = pd.read_parquet('../data/webapp/covid_saude_obito_grouped.parquet')
+    df_daily_deaths = pd.read_parquet('../data/webapp/covid_saude_obitos_diarios.parquet')
+    df_depara_levels = pd.read_parquet('../data/webapp/depara_levels.parquet')
+    # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    df_regional_clusters = pd.read_parquet('../data/webapp/clusters.parquet')
+    df_death_predictions = pd.read_parquet('../data/webapp/death_predictions.parquet')
+    df_predictions_waves = pd.read_parquet('../data/webapp/ajuste_ondas.parquet')
+    # df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
+    # df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
+    # df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
+    # df_regional_clusters = pd.read_parquet('https://drive.google.com/uc?id=1QwvfLf-bH5lwSCLgN297esxM0GvvnUQB')
+    # df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
+    # df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
     df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
-    # json_file = open('../data/app/cities_shape.json')
-    # json_cities_shape = json.load(json_file)
-    # json_cities_shape = utils.get_cities_shape()
-    json_cities_shape=None
+    json_file = open('../data/app/cities_shape.json')
+    json_cities_shape = json.load(json_file)
 
-    # df_vaccine['data'] = pd.to_datetime(df_vaccine['data'])
     df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
     df_weekly_deaths['data'] = pd.to_datetime(df_weekly_deaths['data'])
     df_death_predictions['data'] = pd.to_datetime(df_death_predictions['data'])
@@ -340,10 +337,9 @@ def common_filters_desc(df_daily_deaths, df_weekly_cases, df_death_predictions, 
         selected_filters['cluster'] = df_clusters.loc[df_clusters['codigo_ibge_2'] == selected_city, 'cluster'].iloc[0]
         selected_filters['city_name'] = df_daily_deaths.loc[(df_daily_deaths['codmun'] == selected_city), 'municipio'].iloc[0]
 
-        # cities_filtered_list = [x for x in cities_shape['features'] if
-        #                         x['properties']['cluster'] == selected_filters['cluster']]
-        # cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
-        cities_shape_filtered = None
+        cities_filtered_list = [x for x in cities_shape['features'] if
+                                x['properties']['cluster'] == selected_filters['cluster']]
+        cities_shape_filtered = {'type': 'FeatureCollection', 'features': cities_filtered_list}
 
         level = 'municipio'
         selected_filters['city'] = selected_city
@@ -384,7 +380,7 @@ def plot_daily_deaths(df):
     data = [go.Scatter(
         x=df['data'],
         y=df['obitosNovos'],
-        line=dict(color='rgb(1, 87, 155)'),
+        line=dict(color='rgb(79, 195, 247)'),
         mode='lines',
         # customdata=df_daily_deaths_filtered['obitosPreditos'],
         showlegend=False,
@@ -401,7 +397,7 @@ def plot_cumulative_deaths(df):
     data = [go.Scatter(
         x=df['data'],
         y=df['obitosAcumulado'],
-        line=dict(color='rgb(1, 87, 155)'),
+        line=dict(color='rgb(79, 195, 247)'),
         mode='lines',
         # customdata=df_daily_deaths_filtered['obitosPreditos'],
         showlegend=False,
@@ -418,7 +414,7 @@ def plot_cumulative_adjusted_wave(df, fig):
     fig.add_trace(go.Scatter(
         x=df['data'],
         y=df['obitosAcumPreditos'],
-        line=dict(color='rgb(129, 212, 250)'),
+        line=dict(color='rgb(1, 87, 155)'),
         mode='lines',
         customdata=df['obitosPreditos'],
         showlegend=False
@@ -456,6 +452,8 @@ def plot_trend_waves(df, fig):
                                  x=dfg['data'],
                                  y=dfg['obitosPreditos'],
                                  showlegend=False,
+                                 line=dict(
+                                     width=3)
                                  # marker_color=next(palette),
                                  )
                       )
@@ -465,7 +463,7 @@ def plot_adjusted_wave(df, fig):
     fig.add_trace(go.Scatter(
         x=df['data'],
         y=df['obitosPreditos'],
-        line=dict(color='rgb(129, 212, 250)'),
+        line=dict(color='rgb(1, 87, 155)'),
         mode='lines',
         customdata=df['obitosPreditos'],
         showlegend=False
@@ -601,39 +599,39 @@ def predictive_models():
                     unsafe_allow_html=True,
                 )
 
-                # fig = px.choropleth_mapbox(
-                #     df_clusters,  # banco de dados da soja
-                #     locations="codarea",  # definindo os limites no mapa
-                #     featureidkey="properties.codarea",
-                #     geojson=cities_shape_filtered,  # definindo as delimitações geográficas
-                #     #     color="cluster", # definindo a cor através da base de dados
-                #     custom_data=[df_clusters['Município'],
-                #                  df_clusters['Estabelecimentos de Saúde SUS'],
-                #                  df_clusters['AREA_KM2'],
-                #                  df_clusters['Índice de Desenvolvimento Humano Municipal - 2010 (IDHM 2010)'],
-                #                  df_clusters['PIB per capita a preços correntes']],
-                #     # title='Indice de Letalitade por Região',
-                #     mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
-                #     zoom=3,  # o tamanho do gráfico
-                #     opacity=0.5,  # opacidade da cor do map
-                #     center={"lat": -14, "lon": -55},
-                #     # width=500, height=500,
-                # )
-                # fig.update_layout(  # title="Cidades similares",
-                #     # title_font_color="black",
-                #     font=dict(
-                #         family="arial",
-                #         size=14),
-                #     template="plotly_white",
-                #     plot_bgcolor='rgba(0,0,0,0)',
-                #     showlegend=False,
-                #     margin=dict(b=0))
-                # fig.update_traces(hovertemplate=('<b>Cidade</b>: %{customdata[0]}<br>' +
-                #                    '<b>N° estabelecimentos SUS</b>: %{customdata[1]}' +
-                #                    '<br><b>Área (km²)</b>: %{customdata[2]}' +
-                #                    '<br><b>IDH</b>: %{customdata[3]}' +
-                #                    '<br><b>PIB per capita</b>: %{customdata[4]}'),)
-                # st.plotly_chart(fig, use_container_width=True)
+                fig = px.choropleth_mapbox(
+                    df_clusters,  # banco de dados da soja
+                    locations="codarea",  # definindo os limites no mapa
+                    featureidkey="properties.codarea",
+                    geojson=cities_shape_filtered,  # definindo as delimitações geográficas
+                    #     color="cluster", # definindo a cor através da base de dados
+                    custom_data=[df_clusters['Município'],
+                                 df_clusters['Estabelecimentos de Saúde SUS'],
+                                 df_clusters['AREA_KM2'],
+                                 df_clusters['Índice de Desenvolvimento Humano Municipal - 2010 (IDHM 2010)'],
+                                 df_clusters['PIB per capita a preços correntes']],
+                    # title='Indice de Letalitade por Região',
+                    mapbox_style="carto-positron",  # Definindo novo estilo de mapa, o de satélite
+                    zoom=3,  # o tamanho do gráfico
+                    opacity=0.5,  # opacidade da cor do map
+                    center={"lat": -14, "lon": -55},
+                    # width=500, height=500,
+                )
+                fig.update_layout(  # title="Cidades similares",
+                    # title_font_color="black",
+                    font=dict(
+                        family="arial",
+                        size=14),
+                    template="plotly_white",
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    showlegend=False,
+                    margin=dict(b=0))
+                fig.update_traces(hovertemplate=('<b>Cidade</b>: %{customdata[0]}<br>' +
+                                   '<b>N° estabelecimentos SUS</b>: %{customdata[1]}' +
+                                   '<br><b>Área (km²)</b>: %{customdata[2]}' +
+                                   '<br><b>IDH</b>: %{customdata[3]}' +
+                                   '<br><b>PIB per capita</b>: %{customdata[4]}'),)
+                st.plotly_chart(fig, use_container_width=True)
 
             else:
                 st.write(
@@ -985,7 +983,8 @@ def about():
 
 
 # utils.localCSS(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\src\style.css")
-utils.localCSS("style.css")
+utils.localCSS("../src/style.css")
+
 st.write(f"""<div>
             <div class="base-wrapper flex flex-column" style="background-color:#0277bd">
                 <div class="white-span header p1" style="font-size:30px;">Acompanhamento Covid-19 - ICMC/MECAI - USP</div>
