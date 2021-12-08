@@ -59,12 +59,23 @@ footer {visibility: hidden;}
 @st.cache(allow_output_mutation=True)
 def load_data():
     df_weekly_deaths = pd.read_parquet('../data/webapp/covid_saude_obito_grouped.parquet')
+    df_weekly_deaths = pd.read_parquet('../data/webapp/covid_saude_obito_grouped_new.parquet')
     df_daily_deaths = pd.read_parquet('../data/webapp/covid_saude_obitos_diarios.parquet')
     df_depara_levels = pd.read_parquet('../data/webapp/depara_levels.parquet')
-    # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
     df_regional_clusters = pd.read_parquet('../data/webapp/clusters.parquet')
     df_death_predictions = pd.read_parquet('../data/webapp/death_predictions.parquet')
     df_predictions_waves = pd.read_parquet('../data/webapp/ajuste_ondas.parquet')
+    json_file = open('../data/app/cities_shape.json')
+
+    #df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/webapp/covid_saude_obito_grouped.parquet')
+    #df_weekly_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/webapp/covid_saude_obito_grouped_new.parquet')
+    #df_daily_deaths = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/webapp/covid_saude_obitos_diarios.parquet')
+    #df_depara_levels = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/webapp/depara_levels.parquet')
+    # df_vaccine = pd.read_parquet('../data/app/opendatasus_vacinacao.parquet')
+    #df_regional_clusters = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/webapp/clusters.parquet')
+    #df_death_predictions = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/webapp/death_predictions.parquet')
+    #df_predictions_waves = pd.read_parquet('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/webapp/ajuste_ondas.parquet')
+
     # df_weekly_deaths = pd.read_parquet('https://drive.google.com/uc?id=19FWD9Ya8e0E1186dVDHc2zi_MCAyd6W9')
     # df_daily_deaths = pd.read_parquet('https://drive.google.com/uc?id=1A0fjwcAMf8-ZatxRlJN5XW3lxvn5lRqf')
     # df_depara_levels = pd.read_parquet('https://drive.google.com/uc?id=1mhfsmCku5FgXSZ2QSts59h1lM6nOzqwS')
@@ -72,7 +83,7 @@ def load_data():
     # df_death_predictions = pd.read_parquet('https://drive.google.com/uc?id=1puJapeXxPiwpBSTg_xi24AVFxCFofK6p')
     # df_predictions_waves = pd.read_parquet('https://drive.google.com/uc?id=1BPRBpH79ryvTn5_jFG36-t-YjO8acu-_')
     df_predictions_waves.dropna(subset=['obitosPreditos'], inplace=True)
-    json_file = open('../data/app/cities_shape.json')
+#    json_file = open('C:/Users/mscamargo/Desktop/estudos/my_proj/covid19_previsoes_municipios/data/app/cities_shape.json')
     json_cities_shape = json.load(json_file)
 
     df_daily_deaths['data'] = pd.to_datetime(df_daily_deaths['data'])
@@ -373,7 +384,20 @@ def common_filters_desc(df_daily_deaths, df_weekly_cases, df_death_predictions, 
 
 
 def home():
-    st.title('Início')
+    st.write(
+        """
+    <div class="base-wrapper primary-span">
+        <span class="section-header">O Projeto</span>
+    </div>
+    <div class="base-wrapper">
+        <span>
+            Plataforma Web para disponibilização pública das principais informações relativas à dinâmica da Covid-19 
+            para cada município do Brasil, incluindo a previsão do número de óbitos, possibilitando as agregações 
+            regionais e nacional.
+        </span>
+    </div>""",
+        unsafe_allow_html=True,
+    )
 
 
 def plot_daily_deaths(df):
@@ -795,6 +819,17 @@ def descriptive_models():
                     width=0)
             ))
         fig.append_trace(trace2, 1, 1)
+        list_at = ['Propaganda', 'Atos de Governo', 'Atos normativos',
+       'Atos de gestão,Atos normativos', 'Atos de Governo,Propaganda',
+       'Atos normativos,Propaganda', 'null']
+        
+        fig.update_traces(
+            hovertemplate="%{customdata}<extra></extra>",
+             hoverlabel =  dict(bgcolor=np.where(df_weekly_cases_level_up_fixed['tipo_at'].isin(list_at),'white', 'blue'))
+        )
+
+ 
+
 
         ################################################################################################################
         ###########################################     Gráfico de baixo     ###########################################
@@ -830,9 +865,9 @@ def descriptive_models():
         
         fig.update_traces(
             hovertemplate="%{customdata}<extra></extra>",
-            hoverlabel=dict(bgcolor='white', font_size=14,
-                            font_family="Arial"),
-            # hoverlabel =  dict(bgcolor=np.where(df_weekly_cases_level_up_fixed['tipo_at'].isin(list_at),'white', 'blue')),
+            #hoverlabel=dict(bgcolor='white', font_size=14,
+             #               font_family="Arial"),
+            hoverlabel =  dict(bgcolor=np.where(df_weekly_cases_level_up_fixed['tipo_at'].isin(list_at),'white', 'blue')),
             row=1
         )
 
@@ -878,21 +913,6 @@ def descriptive_models():
 
 
 def about():
-    st.write(
-        """
-    <div class="base-wrapper primary-span">
-        <span class="section-header">O Projeto</span>
-    </div>
-    <div class="base-wrapper">
-        <span>
-            Plataforma Web para disponibilização pública das principais informações relativas à dinâmica da Covid-19 
-            para cada município do Brasil, incluindo a previsão do número de óbitos, possibilitando as agregações 
-            regionais e nacional.
-        </span>
-    </div>""",
-        unsafe_allow_html=True,
-    )
-
     st.write(
         """
     <div class="base-wrapper primary-span">
@@ -982,8 +1002,8 @@ def about():
     )
 
 
-# utils.localCSS(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\src\style.css")
-utils.localCSS("../src/style.css")
+utils.localCSS(r"C:\Users\mscamargo\Desktop\estudos\my_proj\covid19_previsoes_municipios\src\style.css")
+#utils.localCSS("style.css")
 
 st.write(f"""<div>
             <div class="base-wrapper flex flex-column" style="background-color:#0277bd">
@@ -992,7 +1012,7 @@ st.write(f"""<div>
          unsafe_allow_html=True,
          )
 if page == 'Início':
-    about()
+    home()
 elif page == 'Modelos descritivos':
     descriptive_models()
 elif page == 'Modelos preditivos':
